@@ -1,0 +1,84 @@
+# Specify the name of your service.
+# Must only contain lowercase alpha characters (a-z) and hyphens (-)
+name: my-service
+
+# Enable running multiple builds/deployments/destructions at the same time.
+concurrent: true
+
+# Setup specific config for different environments.
+# These environments can be specified when passing in the -env flag to the
+# deploy or destroy commands.
+#
+# Has no effect in build.
+environments:
+  staging:
+    nomad_url: https://example.com/
+  production:
+    nomad_url: https://example.com/
+
+# Configure the deployments to be run.
+#
+# Minimal config:
+# deployments:
+#   my-app:
+#     nomad_file: example.nomad
+#
+# Minimal config with builds:
+# deployments:
+#   my-app:
+#     nomad_file: example.nomad
+#     builds:
+#       my-build:
+#         name: image_name
+#         tags:
+#           - my-tag
+#         push: true
+#         deploy_tag: my-tag
+deployments:
+  # The name of the deployment.
+  app:
+
+    # Builds for this deployment.
+    builds:
+
+      # The name of the build.
+      web:
+
+        # (Optional) The docker context to use.
+        context: .
+
+        # (Optional) The path to the dockerfile to use.
+        file: example.Dockerfile
+
+        # (Optional) The docker registry url to use.
+        registry_url: example.com
+
+        # The name of the docker image.
+        name: tent
+
+        # (Optional) Any tags to apply to the image. (Should NOT contain the image name or registry!)
+        tags:
+          - my-tag
+          - latest
+
+        # (Optional) Should the tags be pushed to the registry?
+        push: false
+
+        # (Optional) The dockerfile multi-stage target.
+        target: production
+
+        # The tag to use when generating the image url/name to use in the nomad file.
+        deploy_tag: my-tag
+
+    # The path to the nomad file to use.
+    nomad_file: example.nomad
+
+    # The number of instances to start if no currently running job is found.
+    start_instances: 2
+
+    # Only to be used if the job name is hard coded within the nomad file. (job "my-name-here" { ... })
+    service_name: my-service
+
+    # Any variables to make available when parsing the nomad file.
+    variables:
+      some_variable: test

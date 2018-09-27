@@ -1,0 +1,1 @@
+FROM kitematic/hello-world-nginx:latest

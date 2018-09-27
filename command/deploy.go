@@ -1,0 +1,307 @@
+package command
+
+import (
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	config "labs.pmsystem.co.uk/devops/tent/config"
+	nomad "labs.pmsystem.co.uk/devops/tent/nomad"
+)
+
+// DeployCommand runs the build to prepare the project for deployment.
+type DeployCommand struct {
+	Meta
+}
+
+// Help displays help output for the command.
+func (c *DeployCommand) Help() string {
+	helpText := `
+Usage: tent deploy [-env=]
+
+	Deploy is used to build the project ready for deployment.
+	
+	-env=
+        Specify the environment configuration to use.
+
+General Options:
+
+    ` + generalOptionsUsage() + `
+    `
+
+	return strings.TrimSpace(helpText)
+}
+
+// Synopsis displays the command synopsis.
+func (c *DeployCommand) Synopsis() string { return "Deploy the project according to the config." }
+
+// Name returns the name of the command.
+func (c *DeployCommand) Name() string { return "deploy" }
+
+// Run starts the build procedure.
+func (c *DeployCommand) Run(args []string) int {
+	var verbose bool
+	var environment string
+
+	flags := flag.NewFlagSet(c.Name(), flag.ContinueOnError)
+	flags.BoolVar(&verbose, "verbose", false, "Turn on verbose output.")
+	flags.StringVar(&environment, "env", "production", "Specify the environment to use.")
+	flags.Parse(args)
+
+	envConfig := c.Config.Environments[environment]
+
+	args = flags.Args()
+
+	if environment == "production" {
+		c.UI.Warn("You are running using the Production environment!")
+	}
+
+	nomadURL := generateNomadURL(envConfig.NomadURL)
+
+	nomadClient := nomad.DefaultClient{
+		Address: nomadURL,
+	}
+
+	var concurrency int
+
+	if c.Config.Concurrent {
+		concurrency = 5
+	} else {
+		concurrency = 1
+	}
+
+	sem := make(chan bool, concurrency)
+
+	errorCount := 0
+
+	for name, deployment := range c.Config.Deployments {
+		sem <- true
+		go func(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client) {
+			defer func() { <-sem }()
+			c.deploy(name, deployment, verbose, errorCount, nomadClient)
+		}(name, deployment, verbose, &errorCount, &nomadClient)
+	}
+
+	for i := 0; i < cap(sem); i++ {
+		sem <- true
+	}
+
+	if errorCount > 0 {
+		c.UI.Error("Exiting with errors.")
+		return 1
+	}
+
+	return 0
+}
+
+func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client) {
+	c.UI.Output(fmt.Sprintf("===> [%s] Starting deployment.", name))
+
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Loading nomad file: %s.", name, deployment.NomadFile))
+	}
+
+	jobName := generateJobName(deployment.ServiceName, c.Config.Name, name)
+
+	existingJob, err := nomadClient.ReadJob(jobName)
+
+	groupSizes := map[string]int{}
+
+	if err == nil {
+		for _, group := range existingJob.TaskGroups {
+			groupSizes[group.Name] = group.Count
+		}
+	}
+
+	nomadFile := generateNomadFileName(deployment.NomadFile, jobName)
+
+	nomadFileContents, err := loadNomadFile(nomadFile)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
+		*errorCount++
+		return
+	}
+
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Parsing nomad file and doing variable replacement: %s.", name, deployment.NomadFile))
+	}
+
+	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
+		*errorCount++
+		return
+	}
+
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s.", name, c.Config.Name))
+	}
+
+	json, id, err := nomadClient.ParseJob(parsedFile)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error building job spec:\n  %s", name, err))
+		*errorCount++
+		return
+	}
+
+	if len(id) == 0 {
+		c.UI.Error(fmt.Sprintf("===> [%s] Invalid JobID returned from nomad.", name))
+		*errorCount++
+		return
+	}
+
+	c.UI.Output(fmt.Sprintf("===> [%s] Submitting job to nomad.", name))
+
+	result, e := nomadClient.UpdateJob(id, json)
+
+	if e != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error updating job \"%s\":\n %s", name, c.Config.Name, e))
+		*errorCount++
+		return
+	}
+
+	c.UI.Info(fmt.Sprintf("===> [%s] Job successfully sent to nomad.", name))
+
+	c.UI.Output(fmt.Sprintf("===> [%s] Monitoring deployment for success.", name))
+
+	eval, _ := nomadClient.ReadEvaluation(result.EvalID)
+
+	for eval.Status != "complete" {
+		evalStatus, _ := nomadClient.ReadEvaluation(result.EvalID)
+		eval = evalStatus
+
+		if verbose {
+			c.UI.Warn(fmt.Sprintf("===> [%s] Evaluation Status: %s", name, eval.Status))
+		}
+
+		time.Sleep(time.Millisecond * 500)
+	}
+
+	nomadDeployment, err := nomadClient.GetLatestDeployment(id)
+
+	if nomadDeployment.Status == "successful" {
+		c.UI.Info(fmt.Sprintf("===> [%s] Deployment successful.", name))
+	} else if nomadDeployment.Status == "running" {
+		for nomadDeployment.Status == "running" {
+			deploymentInfo, err := nomadClient.ReadDeployment(nomadDeployment.ID)
+
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("===> [%s] Error monitoring deployment: %s", name, err))
+				*errorCount++
+				return
+			}
+
+			nomadDeployment = deploymentInfo
+
+			var healthy, unhealthy, desired int
+
+			for _, group := range nomadDeployment.TaskGroups {
+				healthy += group.HealthyAllocs
+				unhealthy += group.UnhealthyAllocs
+				desired += group.DesiredTotal
+			}
+
+			if verbose {
+				if unhealthy > 0 {
+					c.UI.Warn(fmt.Sprintf("===> [%s] Deployment is: %s (Healthy: %d, Unhealthy %d, Desired: %d)", name, nomadDeployment.StatusDescription, healthy, unhealthy, desired))
+				} else {
+					c.UI.Output(fmt.Sprintf("===> [%s] Deployment is: %s (Healthy: %d, Unhealthy %d, Desired: %d)", name, nomadDeployment.StatusDescription, healthy, unhealthy, desired))
+				}
+			}
+
+			if healthy == desired {
+				time.Sleep(time.Millisecond * 500)
+			} else if healthy > 0 {
+				time.Sleep(time.Second * 1)
+			} else {
+				time.Sleep(time.Second * 5)
+			}
+		}
+
+		if nomadDeployment.Status == "successful" {
+			c.UI.Info(fmt.Sprintf("===> [%s] Deployment successful.", name))
+		} else {
+			c.UI.Error(fmt.Sprintf("===> [%s] Deployment unsuccessful. Status: %s", name, nomadDeployment.StatusDescription))
+		}
+	} else {
+		c.UI.Error(fmt.Sprintf("===> [%s] Deployment unsuccessful.", name))
+	}
+}
+
+func loadNomadFile(path string) (string, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", fmt.Errorf("Unable to find nomad file: %s", path)
+	}
+
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return "", fmt.Errorf("Unable to load nomad file: %s err: %s", path, err)
+	}
+
+	return string(file), nil
+}
+
+func parseNomadFile(file string, serviceName string, deploymentName string, deployment config.Deployment, groupSizes map[string]int) (string, error) {
+	file = strings.Replace(file, "TENT_name", serviceName, -1)
+	file = strings.Replace(file, "TENT_deployment_name", deploymentName, -1)
+	file = strings.Replace(file, "TENT_job_name", generateJobName(deployment.ServiceName, serviceName, deploymentName), -1)
+
+	for key, build := range deployment.Builds {
+		file = strings.Replace(file, fmt.Sprintf("TENT_image_%s", key), BuildTag(build.RegistryURL, build.Name, build.DeployTag), -1)
+	}
+
+	for variable, value := range deployment.Variables {
+		file = strings.Replace(file, fmt.Sprintf("TENT_var_%s", variable), value, -1)
+	}
+
+	for group, size := range groupSizes {
+		file = strings.Replace(file, fmt.Sprintf("TENT_group_%s_size", group), strconv.Itoa(size), -1)
+	}
+
+	var re = regexp.MustCompile(`TENT_group_.*_size`)
+
+	if deployment.StartInstances == 0 {
+		file = re.ReplaceAllString(file, strconv.Itoa(2))
+	} else {
+		file = re.ReplaceAllString(file, strconv.Itoa(deployment.StartInstances))
+	}
+
+	return file, nil
+}
+
+func generateJobName(serviceName string, tentName string, deploymentName string) string {
+	var jobName string
+
+	if len(serviceName) > 0 {
+		jobName = serviceName
+	} else {
+		jobName = fmt.Sprintf("%s-%s", tentName, deploymentName)
+	}
+
+	return jobName
+}
+
+func generateNomadURL(nomadURL string) string {
+	if strings.HasSuffix(nomadURL, "/") {
+		nomadURL = nomadURL[:len(nomadURL)-len("/")]
+	}
+
+	return nomadURL
+}
+
+func generateNomadFileName(nomadFile string, jobName string) string {
+	if len(nomadFile) == 0 {
+		nomadFile = fmt.Sprintf("%s.nomad", jobName)
+	}
+
+	return nomadFile
+}
