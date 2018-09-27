@@ -7,6 +7,10 @@ A simple tool to manage builds and deployments when using [Nomad](https://nomadp
     1. [Reference](#reference)
     2. [Examples](#examples)
 3. [Nomad](#nomad)
+4. [Commands](#commands)
+    1. [Build](#build)
+    2. [Deploy](#deploy)
+    3. [Destroy](#destroy)
 
 ## Features
 
