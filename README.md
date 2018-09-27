@@ -2,11 +2,11 @@
 
 A simple tool to manage builds and deployments when using [Nomad](https://nomadproject.io) and Docker. (Although docker is optional!)
 
-1. [Features](#Features)
-2. [Configuration](#Configuration)
-    1. [Reference](#Reference)
-    2. [Examples](#Examples)
-3. [Nomad](#Nomad)
+1. [Features](#features)
+2. [Configuration](#configuration)
+    1. [Reference](#reference)
+    2. [Examples](#examples)
+3. [Nomad](#nomad)
 
 ## Features
 
