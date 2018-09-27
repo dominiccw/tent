@@ -1,33 +1,34 @@
-.PHONY: build run-dev build-docker
+.PHONY: build run-dev build-docker clean
 
 GIT_BRANCH := $(subst heads/,,$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null))
 DEV_IMAGE := tent-dev$(if $(GIT_BRANCH),:$(subst /,-,$(GIT_BRANCH)))
 DEV_DOCKER_IMAGE := tent-bin-dev$(if $(GIT_BRANCH),:$(subst /,-,$(GIT_BRANCH)))
 
-default: binary
+default: clean install coverage crossbinary
 
-binary: build
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=linux -e CGO_ENABLED=0 -e GOGC=off -e GOARCH=amd64 "$(DEV_IMAGE)" go build -a -tags netgo -ldflags '-w' -o "/dist/tent"
+clean:
+	rm -rf dist/
+
+binary: install
+	GO111MODULE=on GOOS=linux CGO_ENABLED=0 GOGC=off GOARCH=amd64 go build -a -tags netgo -ldflags '-w' -o "$(CURDIR)/dist/tent"
 
 crossbinary: binary
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=linux -e GOARCH=amd64 "$(DEV_IMAGE)" go build -o "/dist/tent-linux-amd64"
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=linux -e GOARCH=386 "$(DEV_IMAGE)" go build -o "/dist/tent-linux-386"
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=darwin -e GOARCH=amd64 "$(DEV_IMAGE)" go build -o "/dist/tent-darwin-amd64"
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=darwin -e GOARCH=386 "$(DEV_IMAGE)" go build -o "/dist/tent-darwin-386"
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=windows -e GOARCH=amd64 "$(DEV_IMAGE)" go build -o "/dist/tent-windows-amd64.exe"
-	docker run -it -v $(CURDIR)/dist:/dist -e GO111MODULE=on -e GOOS=windows -e GOARCH=386 "$(DEV_IMAGE)" go build -o "/dist/tent-windows-386.exe"
+	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -o "$(CURDIR)/dist/tent-linux-amd64"
+	GO111MODULE=on GOOS=linux GOARCH=386 go build -o "$(CURDIR)/dist/tent-linux-386"
+	GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -o "$(CURDIR)/dist/tent-darwin-amd64"
+	GO111MODULE=on GOOS=darwin GOARCH=386 go build -o "$(CURDIR)/dist/tent-darwin-386"
+	GO111MODULE=on GOOS=windows GOARCH=amd64 go build -o "$(CURDIR)/dist/tent-windows-amd64.exe"
+	GO111MODULE=on GOOS=windows GOARCH=386 go build -o "$(CURDIR)/dist/tent-windows-386.exe"
 
-install:
+install: clean
+	go mod vendor
 	go generate
 
-test: build
-	docker run -it -e GO111MODULE=on "$(DEV_IMAGE)" go test "./..."
+test:
+	GO111MODULE=on go test ./...
 
-coverage: build
-	docker run -it -e GO111MODULE=on "$(DEV_IMAGE)" ./script/coverage.sh
-
-build: install dist
-	docker build -t "$(DEV_IMAGE)" --target build -f build.Dockerfile .
+coverage:
+	GO111MODULE=on "$(CURDIR)/script/coverage.sh"
 
 dist:
 	mkdir dist
