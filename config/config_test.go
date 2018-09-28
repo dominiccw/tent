@@ -28,6 +28,7 @@ func TestParseConfig(t *testing.T) {
             tags:
               - my-tag
               - latest
+              - latest/test
             push: true
             target: production
             deploy_tag: latest
@@ -52,7 +53,7 @@ func TestParseConfig(t *testing.T) {
 	assert.True(t, c.Deployments["web"].Builds["app"].Push)
 	assert.Equal(t, "production", c.Deployments["web"].Builds["app"].Target)
 	assert.Equal(t, "latest", c.Deployments["web"].Builds["app"].DeployTag)
-	assert.ElementsMatch(t, []string{"my-tag", "latest"}, c.Deployments["web"].Builds["app"].Tags)
+	assert.ElementsMatch(t, []string{"my-tag", "latest", "latest-test"}, c.Deployments["web"].Builds["app"].Tags)
 	assert.Equal(t, 2, c.Deployments["web"].StartInstances)
 	assert.Equal(t, "my-service", c.Deployments["web"].ServiceName)
 }

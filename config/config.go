@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/a8m/envsubst"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -100,7 +101,7 @@ func parseConfig(data []byte) (Config, error) {
 
 			for _, tag := range b.Tags {
 				tmpTag, _ := envsubst.String(tag)
-				newTags = append(newTags, tmpTag)
+				newTags = append(newTags, strings.Replace(tmpTag, "/", "-", -1))
 			}
 
 			if len(b.Script) > 0 {
