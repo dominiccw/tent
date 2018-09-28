@@ -4,7 +4,7 @@ require (
 	github.com/Flaque/filet v0.0.0-20180310200134-dbf95344df50
 	github.com/a8m/envsubst v1.1.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/flosch/pongo2 v0.0.0-20180809100617-24195e6d38b0
+	github.com/flosch/pongo2 v0.0.0-20180809100617-24195e6d38b0 // indirect
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/hashicorp/nomad v0.8.5 // indirect

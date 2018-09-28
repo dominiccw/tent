@@ -1,4 +1,4 @@
-job "TENT_job_name" {
+job "[!name!]" {
     datacenters = ["eu-west-1"]
     type = "service"
 
@@ -8,7 +8,7 @@ job "TENT_job_name" {
     }
 
     group "app" {
-        count = TENT_group_app_size
+        count = [!group_app_size!]
 
         task "web" {
             driver = "docker"
@@ -37,7 +37,7 @@ job "TENT_job_name" {
                 port = "http"
 
                 check {
-                    name = "TENT_job_name alive"
+                    name = "[!job_name!] alive"
                     type = "http"
                     path = "/"
                     interval = "10s"
