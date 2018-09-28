@@ -141,7 +141,7 @@ func (c *DestroyCommand) destroy(name string, deployment config.Deployment, envi
 		c.UI.Output(fmt.Sprintf("===> [%s] Parsing nomad file and doing variable replacement: %s.", name, deployment.NomadFile))
 	}
 
-	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes)
+	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes, environment)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))

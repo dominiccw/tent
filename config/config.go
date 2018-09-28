@@ -13,7 +13,8 @@ import (
 
 // Environment configuration.
 type Environment struct {
-	NomadURL string `yaml:"nomad_url" validate:"required,url"`
+	NomadURL  string            `yaml:"nomad_url" validate:"required,url"`
+	Variables map[string]string `yaml:"variables"`
 }
 
 // Build configuration.
@@ -75,6 +76,16 @@ func parseConfig(data []byte) (Config, error) {
 		var x = env
 		tmpNomadURL, _ := envsubst.String(env.NomadURL)
 		x.NomadURL = tmpNomadURL
+
+		newVariables := x.Variables
+
+		for key, value := range x.Variables {
+			newValue, _ := envsubst.String(value)
+
+			newVariables[key] = newValue
+		}
+
+		x.Variables = newVariables
 
 		config.Environments[k] = x
 	}

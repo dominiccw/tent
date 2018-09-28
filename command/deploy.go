@@ -81,10 +81,10 @@ func (c *DeployCommand) Run(args []string) int {
 
 	for name, deployment := range c.Config.Deployments {
 		sem <- true
-		go func(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client) {
+		go func(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client, envConfig config.Environment) {
 			defer func() { <-sem }()
-			c.deploy(name, deployment, verbose, errorCount, nomadClient)
-		}(name, deployment, verbose, &errorCount, &nomadClient)
+			c.deploy(name, deployment, verbose, errorCount, nomadClient, envConfig)
+		}(name, deployment, verbose, &errorCount, &nomadClient, envConfig)
 	}
 
 	for i := 0; i < cap(sem); i++ {
@@ -99,7 +99,7 @@ func (c *DeployCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client) {
+func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client, envConfig config.Environment) {
 	c.UI.Output(fmt.Sprintf("===> [%s] Starting deployment.", name))
 
 	if verbose {
@@ -132,7 +132,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		c.UI.Output(fmt.Sprintf("===> [%s] Parsing nomad file and doing variable replacement: %s.", name, deployment.NomadFile))
 	}
 
-	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes)
+	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes, envConfig)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
@@ -250,7 +250,7 @@ func loadNomadFile(path string) (string, error) {
 	return string(file), nil
 }
 
-func parseNomadFile(file string, serviceName string, deploymentName string, deployment config.Deployment, groupSizes map[string]int) (string, error) {
+func parseNomadFile(file string, serviceName string, deploymentName string, deployment config.Deployment, groupSizes map[string]int, environment config.Environment) (string, error) {
 	file = strings.Replace(file, "TENT_name", serviceName, -1)
 	file = strings.Replace(file, "TENT_deployment_name", deploymentName, -1)
 	file = strings.Replace(file, "TENT_job_name", generateJobName(deployment.ServiceName, serviceName, deploymentName), -1)
@@ -261,6 +261,10 @@ func parseNomadFile(file string, serviceName string, deploymentName string, depl
 
 	for variable, value := range deployment.Variables {
 		file = strings.Replace(file, fmt.Sprintf("TENT_var_%s", variable), value, -1)
+	}
+
+	for variable, value := range environment.Variables {
+		file = strings.Replace(file, fmt.Sprintf("TENT_env_%s", variable), value, -1)
 	}
 
 	for group, size := range groupSizes {

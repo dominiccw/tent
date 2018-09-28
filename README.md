@@ -75,6 +75,15 @@ environments:
     # - Supports environment variable interpolation.
     nomad_url: https://example.com/
 
+    # (Optional) Any variables to make available when parsing the nomad file.
+    # Default: 
+    variables:
+
+      # A variable that can be used within a nomad file.
+      # The below variable would be available as so: `TENT_env_my_variable`
+      # - Supports environment variable interpolation.
+      my_variable: test
+
   production:
 
     # (Required) The URL to the nomad server to use.

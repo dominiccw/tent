@@ -16,6 +16,8 @@ func TestParseConfig(t *testing.T) {
     environments:
       staging:
         nomad_url: http://example.com
+        variables:
+          some_variable: test
       production:
         nomad_url: http://example.com/prod
     deployments:
@@ -56,6 +58,7 @@ func TestParseConfig(t *testing.T) {
 	assert.ElementsMatch(t, []string{"my-tag", "latest", "latest-test"}, c.Deployments["web"].Builds["app"].Tags)
 	assert.Equal(t, 2, c.Deployments["web"].StartInstances)
 	assert.Equal(t, "my-service", c.Deployments["web"].ServiceName)
+	assert.Equal(t, "test", c.Environments["staging"].Variables["some_variable"])
 }
 
 func TestParseMinimalConfig(t *testing.T) {
@@ -122,6 +125,8 @@ func TestParseWithEnvironmentExpansion(t *testing.T) {
     environments:
       staging:
         nomad_url: ${NOMAD_URL}
+        variables:
+          some_variable: ${SOME_VARIABLE}
       production:
         nomad_url: http://example.com/prod
     deployments:
@@ -148,6 +153,7 @@ func TestParseWithEnvironmentExpansion(t *testing.T) {
 	os.Setenv("COMMIT_HASH", "101010999999")
 	os.Setenv("DEPLOY_IMAGE", "somewhere/my-image:latest")
 	os.Setenv("NOMAD_FILE", "test-nomad-file.nomad")
+	os.Setenv("SOME_VARIABLE", "test")
 
 	c, err := parseConfig([]byte(data))
 
@@ -160,6 +166,7 @@ func TestParseWithEnvironmentExpansion(t *testing.T) {
 	assert.Equal(t, "production", c.Deployments["web"].Builds["app"].Target)
 	assert.ElementsMatch(t, c.Deployments["web"].Builds["app"].Tags, []string{"my-tag", "latest:101010999999"})
 	assert.Equal(t, expectedNomadFilePath, c.Deployments["web"].NomadFile)
+	assert.Equal(t, "test", c.Environments["staging"].Variables["some_variable"])
 }
 
 func TestConfigWithBuildScript(t *testing.T) {

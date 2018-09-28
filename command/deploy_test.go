@@ -89,6 +89,7 @@ func TestParseNomadFile(t *testing.T) {
 			StartInstances: 2,
 		},
 		map[string]int{},
+		config.Environment{},
 	)
 
 	assert.Nil(t, err)
@@ -110,6 +111,7 @@ func TestParseNomadFileWithoutStartInstances(t *testing.T) {
 			},
 		},
 		map[string]int{},
+		config.Environment{},
 	)
 
 	assert.Nil(t, err)
@@ -131,6 +133,7 @@ func TestParseNomadFileWithGroupSizes(t *testing.T) {
 			},
 		},
 		map[string]int{"deployment": 4},
+		config.Environment{},
 	)
 
 	assert.Nil(t, err)
@@ -247,7 +250,7 @@ func TestDeploy(t *testing.T) {
 
 	var errorCount int
 
-	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, &nomadClient)
+	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, &nomadClient, config.Environment{})
 
 	assert.Equal(t, 0, errorCount)
 	assert.Equal(t, 1, nomadClient.ReadDeploymentCallCount)
