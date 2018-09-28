@@ -54,7 +54,7 @@ Any config values that support environment variable interpolation are marked bel
 ```yaml
 # (Required) Specify the name of your service.
 # - Must only contain lowercase alpha characters (a-z) and hyphens (-)
-# - Available as `TENT_name` within a nomad file.
+# - Available as `[!name!]` within a nomad file.
 # - Supports environment variable interpolation.
 name: my-service
 
@@ -80,7 +80,7 @@ environments:
     variables:
 
       # A variable that can be used within a nomad file.
-      # The below variable would be available as so: `TENT_env_my_variable`
+      # The below variable would be available as so: `[!env_my_variable!]`
       # - Supports environment variable interpolation.
       my_variable: test
 
@@ -111,7 +111,7 @@ environments:
 deployments:
 
   # The name of the deployment.
-  # Available as `TENT_deployment_name` within a nomad file.
+  # Available as `[!deployment_name!]` within a nomad file.
   app:
 
     # Builds for this deployment.
@@ -156,10 +156,10 @@ deployments:
 
         # The tag to use when generating the image url/name to use in the nomad file.
         # The generated/built image (eg, 240422614719.dkr.ecr.eu-west-1.amazonaws.com/tent:my-tag)
-        # is available as `TENT_image_{build_name}` within a nomad file, where {build_name}
+        # is available as `[!image_{build_name}!]` within a nomad file, where {build_name}
         # is the name of the build.
         #
-        # In this example, {build_name} would be web, giving `TENT_image_web` as the variable.
+        # In this example, {build_name} would be web, giving `[!image_web!]` as the variable.
         #
         # - Supports environment variable interpolation.
         # Default: latest
@@ -184,7 +184,7 @@ deployments:
     # Default: 
     variables:
       # A variable that can be used within a nomad file.
-      # The below variable would be available as so: `TENT_var_some_variable`
+      # The below variable would be available as so: `[!var_some_variable!]`
       # - Supports environment variable interpolation.
       some_variable: example
 ```
@@ -237,16 +237,16 @@ Tent will replace certain variables found within a nomad file with their compute
 
 Available Variables:
 
-- `TENT_name`
+- `[!name!]`
     - This is the `name` property from the yaml config.
-- `TENT_deployment_name`
+- `[!deployment_name!]`
     - This is the name of the currently running deployment from the yaml config.
-- `TENT_job_name`
+- `[!job_name!]`
     - This is either the `service_name` property from the yaml config for the running deployment, or the combination of the `name` property and the currently running deployment name from the yaml config.
-- `TENT_image_{build_name}`
+- `[!image_{build_name}!]`
     - This is the generated docker image name, where `{bulild_name}` is replaced with the name of the build within the currently running deployment.
-- `TENT_group_{task_group}_size`
-    - This is the current size of the `Task Group` if the job is already running in nomad. This will be the same as the group name in your `.nomad` file. You may nest variables within this, for example `TENT_group_TENT_deployment_name_size` to achieve some useful dynamic results.
+- `[!group_{task_group}_size!]`
+    - This is the current size of the `Task Group` if the job is already running in nomad. This will be the same as the group name in your `.nomad` file. If you use the `[!deployment_name!]` variable for your nomad group you may use `[!group_size!]` to retrieve the value.
     - If there is no job running, this will be replaced with `2`.
 
 ## Commands
