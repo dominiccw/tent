@@ -75,7 +75,7 @@ func (c *testNomadClient) ReadJob(ID string) (nomad.ReadJobResponse, error) {
 
 func TestParseNomadFile(t *testing.T) {
 	result, err := parseNomadFile(
-		"job \"TENT_job_name\" { group \"TENT_name\" count = TENT_group_TENT_NAME_size { task \"TENT_deployment_name\" { config { image = \"TENT_image_web\" } } } }",
+		"job \"[!job_name!]\" { group \"[!name!]\" count = [!group_size!] { task \"[!deployment_name!]\" { config { image = \"[!image_web!]\" } } } }",
 		"service",
 		"deployment",
 		config.Deployment{
@@ -98,7 +98,7 @@ func TestParseNomadFile(t *testing.T) {
 
 func TestParseNomadFileWithoutStartInstances(t *testing.T) {
 	result, err := parseNomadFile(
-		"job \"TENT_job_name\" { group \"TENT_name\" count = TENT_group_TENT_NAME_size { task \"TENT_deployment_name\" { config { image = \"TENT_image_web\" } } } }",
+		"job \"[!job_name!]\" { group \"[!name!]\" count = [!group_deployment_size!] { task \"[!deployment_name!]\" { config { image = \"[!image_web!]\" } } } }",
 		"service",
 		"deployment",
 		config.Deployment{
@@ -120,7 +120,7 @@ func TestParseNomadFileWithoutStartInstances(t *testing.T) {
 
 func TestParseNomadFileWithGroupSizes(t *testing.T) {
 	result, err := parseNomadFile(
-		"job \"TENT_job_name\" { group \"TENT_name\" count = TENT_group_deployment_size { task \"TENT_deployment_name\" { config { image = \"TENT_image_web\" } } } }",
+		"job \"[!job_name!]\" { group \"[!name!]\" count = [!group_deployment_size!] { task \"[!deployment_name!]\" { config { image = \"[!image_web!]\" } } } }",
 		"service",
 		"deployment",
 		config.Deployment{

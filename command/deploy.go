@@ -3,15 +3,16 @@ package command
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	config "github.com/PM-Connect/tent/config"
 	nomad "github.com/PM-Connect/tent/nomad"
+	"github.com/valyala/fasttemplate"
 )
 
 // DeployCommand runs the build to prepare the project for deployment.
@@ -255,35 +256,59 @@ func loadNomadFile(path string) (string, error) {
 }
 
 func parseNomadFile(file string, serviceName string, deploymentName string, deployment config.Deployment, groupSizes map[string]int, environment config.Environment) (string, error) {
-	file = strings.Replace(file, "TENT_name", serviceName, -1)
-	file = strings.Replace(file, "TENT_deployment_name", deploymentName, -1)
-	file = strings.Replace(file, "TENT_job_name", generateJobName(deployment.ServiceName, serviceName, deploymentName), -1)
+	template := file
+
+	t := fasttemplate.New(template, "[!", "!]")
+
+	context := map[string]string{
+		"name":            serviceName,
+		"deployment_name": deploymentName,
+		"job_name":        generateJobName(deployment.ServiceName, serviceName, deploymentName),
+	}
 
 	for key, build := range deployment.Builds {
-		file = strings.Replace(file, fmt.Sprintf("TENT_image_%s", key), BuildTag(build.RegistryURL, build.Name, build.DeployTag), -1)
+		context["image_"+key] = BuildTag(build.RegistryURL, build.Name, build.DeployTag)
 	}
 
 	for variable, value := range deployment.Variables {
-		file = strings.Replace(file, fmt.Sprintf("TENT_var_%s", variable), value, -1)
+		context["var_"+variable] = value
 	}
 
 	for variable, value := range environment.Variables {
-		file = strings.Replace(file, fmt.Sprintf("TENT_env_%s", variable), value, -1)
+		context["env_"+variable] = value
 	}
 
 	for group, size := range groupSizes {
-		file = strings.Replace(file, fmt.Sprintf("TENT_group_%s_size", group), strconv.Itoa(size), -1)
+		context["group_"+group+"_size"] = strconv.Itoa(size)
 	}
 
-	var re = regexp.MustCompile(`TENT_group_.*_size`)
+	out := t.ExecuteFuncString(func(w io.Writer, tag string) (int, error) {
+		if context[tag] != "" {
+			return w.Write([]byte(context[tag]))
+		}
 
-	if deployment.StartInstances == 0 {
-		file = re.ReplaceAllString(file, strconv.Itoa(2))
-	} else {
-		file = re.ReplaceAllString(file, strconv.Itoa(deployment.StartInstances))
-	}
+		if strings.HasPrefix(tag, "group_") && strings.HasSuffix(tag, "_size") {
+			group := strings.TrimSuffix(strings.TrimPrefix(tag, "group_"), "_size")
 
-	return file, nil
+			if group == "" && groupSizes[deploymentName] != 0 {
+				return w.Write([]byte(strconv.Itoa(groupSizes[deploymentName])))
+			}
+
+			if groupSizes[group] != 0 {
+				return w.Write([]byte(strconv.Itoa(groupSizes[group])))
+			}
+
+			if deployment.StartInstances > 0 {
+				return w.Write([]byte(strconv.Itoa(deployment.StartInstances)))
+			}
+
+			return w.Write([]byte("2"))
+		}
+
+		return w.Write([]byte(""))
+	})
+
+	return out, nil
 }
 
 func generateJobName(serviceName string, tentName string, deploymentName string) string {
