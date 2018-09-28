@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
+	config "github.com/PM-Connect/tent/config"
+	"github.com/PM-Connect/tent/docker"
 	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
-	config "labs.pmsystem.co.uk/devops/tent/config"
-	"labs.pmsystem.co.uk/devops/tent/docker"
 )
 
 func TestBuildTagsWithSingleTag(t *testing.T) {

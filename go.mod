@@ -1,4 +1,4 @@
-module labs.pmsystem.co.uk/devops/tent
+module github.com/PM-Connect/tent
 
 require (
 	github.com/Flaque/filet v0.0.0-20180310200134-dbf95344df50

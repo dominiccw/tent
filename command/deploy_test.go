@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	filet "github.com/Flaque/filet"
+	config "github.com/PM-Connect/tent/config"
+	"github.com/PM-Connect/tent/nomad"
 	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
-	config "labs.pmsystem.co.uk/devops/tent/config"
-	"labs.pmsystem.co.uk/devops/tent/nomad"
 )
 
 type testNomadClient struct {

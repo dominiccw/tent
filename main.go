@@ -9,9 +9,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/PM-Connect/tent/command"
+	config "github.com/PM-Connect/tent/config"
 	"github.com/mitchellh/cli"
-	"labs.pmsystem.co.uk/devops/tent/command"
-	config "labs.pmsystem.co.uk/devops/tent/config"
 )
 
 func main() {
