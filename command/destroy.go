@@ -109,17 +109,67 @@ func (c *DestroyCommand) Run(args []string) int {
 }
 
 func (c *DestroyCommand) destroy(name string, deployment config.Deployment, environment config.Environment, purge bool, verbose bool, errorCount *int, nomadClient nomad.Client) {
-	jobName := fmt.Sprintf("%s-%s", c.Config.Name, name)
+	c.UI.Output(fmt.Sprintf("===> [%s] Starting destruction process.", name))
 
-	c.UI.Output(fmt.Sprintf("===> [%s] Stopping job.", name))
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Loading nomad file: %s.", name, deployment.NomadFile))
+	}
 
-	err := nomadClient.StopJob(jobName, false)
+	jobName := generateJobName(deployment.ServiceName, c.Config.Name, name)
+
+	existingJob, err := nomadClient.ReadJob(jobName)
+
+	groupSizes := map[string]int{}
+
+	if err == nil {
+		for _, group := range existingJob.TaskGroups {
+			groupSizes[group.Name] = group.Count
+		}
+	}
+
+	nomadFile := generateNomadFileName(deployment.NomadFile, jobName)
+
+	nomadFileContents, err := loadNomadFile(nomadFile)
 
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("===> [%s] Error stopping job %s: %s", name, jobName, err))
+		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
 		*errorCount++
 		return
 	}
 
-	c.UI.Info(fmt.Sprintf("===> [%s] Successfully stopped job: %s", name, jobName))
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Parsing nomad file and doing variable replacement: %s.", name, deployment.NomadFile))
+	}
+
+	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
+		*errorCount++
+		return
+	}
+
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s.", name, c.Config.Name))
+	}
+
+	_, id, err := nomadClient.ParseJob(parsedFile)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
+		*errorCount++
+		return
+	}
+
+	c.UI.Output(fmt.Sprintf("===> [%s] Stopping job.", name))
+
+	err = nomadClient.StopJob(id, false)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error stopping job %s: %s", name, id, err))
+		*errorCount++
+		return
+	}
+
+	c.UI.Info(fmt.Sprintf("===> [%s] Successfully stopped job: %s", name, id))
 }
