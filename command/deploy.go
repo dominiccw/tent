@@ -141,6 +141,10 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 	}
 
 	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Nomad File: \n %s", name, parsedFile))
+	}
+
+	if verbose {
 		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s.", name, c.Config.Name))
 	}
 
