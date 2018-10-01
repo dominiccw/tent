@@ -235,6 +235,8 @@ Out of the box, Tent will deploy a `*.nomad` file to nomad and monitor the deplo
 
 Tent will replace certain variables found within a nomad file with their computed value.
 
+**Any variables that can not be found will be replaced with an empty string!**
+
 Available Variables:
 
 - `[!name!]`
@@ -248,6 +250,10 @@ Available Variables:
 - `[!group_{task_group}_size!]`
     - This is the current size of the `Task Group` if the job is already running in nomad. This will be the same as the group name in your `.nomad` file. If you use the `[!deployment_name!]` variable for your nomad group you may use `[!group_size!]` to retrieve the value.
     - If there is no job running, this will be replaced with `2`.
+- `[!env_{var_name}!]`
+    - You can use any variable defined within the `variables` map of an environment configuration using this syntax.
+- `[!var_{var_name}!]`
+    - You can use any variable defined within the `variables` map of a deployment using this syntax.
 
 ## Commands
 
