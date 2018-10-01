@@ -7,8 +7,8 @@ job "[!name!]" {
         max_parallel = 1
     }
 
-    group "app" {
-        count = [!group_app_size!]
+    group "[!deployment_name!]" {
+        count = [!group_size!]
 
         task "web" {
             driver = "docker"
