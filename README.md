@@ -11,6 +11,7 @@ A simple tool to manage builds and deployments when using [Nomad](https://nomadp
     1. [Build](#build)
     2. [Deploy](#deploy)
     3. [Destroy](#destroy)
+5. [Upcomming Features](#upcomming_features)
 
 ## Features
 
