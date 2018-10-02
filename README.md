@@ -327,3 +327,10 @@ General Options:
     -verbose
         Enables verbose logging.
 ```
+
+## Upcomming Features
+
+The following features will be added in later releases, in no particular order.
+
+- A `rollback` command to rollback to the last (or a given) nomad version.
+- Ability to automatically rollback all defined deployments on a single deployment failure.
