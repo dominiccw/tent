@@ -15,6 +15,11 @@ import (
 	"github.com/valyala/fasttemplate"
 )
 
+var evaluationNotCompleteSleep = time.Millisecond * 500
+var healthyMatchesDesiredSleep = time.Millisecond * 500
+var healthyGreaterThanZeroSleep = time.Second * 1
+var healthyIsZeroSleep = time.Second * 5
+
 // DeployCommand runs the build to prepare the project for deployment.
 type DeployCommand struct {
 	Meta
@@ -187,7 +192,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 			c.UI.Warn(fmt.Sprintf("===> [%s] Evaluation Status: %s", name, eval.Status))
 		}
 
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(evaluationNotCompleteSleep)
 	}
 
 	nomadDeployment, err := nomadClient.GetLatestDeployment(id)
@@ -223,11 +228,11 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 			}
 
 			if healthy == desired {
-				time.Sleep(time.Millisecond * 500)
+				time.Sleep(healthyMatchesDesiredSleep)
 			} else if healthy > 0 {
-				time.Sleep(time.Second * 1)
+				time.Sleep(healthyGreaterThanZeroSleep)
 			} else {
-				time.Sleep(time.Second * 5)
+				time.Sleep(healthyIsZeroSleep)
 			}
 		}
 

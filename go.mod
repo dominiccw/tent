@@ -12,6 +12,7 @@ require (
 	github.com/mitchellh/cli v1.0.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.1.2 // indirect
+	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v0.0.0-20170224212429-dcecefd839c4

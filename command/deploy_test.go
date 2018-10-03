@@ -3,74 +3,53 @@ package command
 import (
 	"os"
 	"testing"
+	"time"
 
 	filet "github.com/Flaque/filet"
 	config "github.com/PM-Connect/tent/config"
 	"github.com/PM-Connect/tent/nomad"
 	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-type testNomadClient struct {
-	// Call Counts
-	ReadDeploymentCallCount      int
-	ReadEvaluationCallCount      int
-	ParseJobCallCount            int
-	UpdateJobCallCount           int
-	GetLatestDeploymentCallCount int
-	StopJobCallCount             int
-	ReadJobCallCount             int
-
-	// Return Values
-	ReadDeploymentReturnValue      nomad.Deployment
-	ReadEvaluationReturnValue      nomad.Evaluation
-	ParseJobReturnValue            string
-	ParseJobReturnID               string
-	UpdateJobReturnValue           nomad.UpdateJobResponse
-	GetLatestDeploymentReturnValue nomad.Deployment
-	ReadJobReturnValue             nomad.ReadJobResponse
+type mockNomadClient struct {
+	mock.Mock
 }
 
-func (c *testNomadClient) ReadDeployment(ID string) (nomad.Deployment, error) {
-	c.ReadDeploymentCallCount++
-
-	return c.ReadDeploymentReturnValue, nil
+func (c *mockNomadClient) ReadDeployment(ID string) (nomad.Deployment, error) {
+	args := c.Called(ID)
+	return args.Get(0).(nomad.Deployment), args.Error(1)
 }
 
-func (c *testNomadClient) ReadEvaluation(ID string) (nomad.Evaluation, error) {
-	c.ReadEvaluationCallCount++
-
-	return c.ReadEvaluationReturnValue, nil
+func (c *mockNomadClient) ReadEvaluation(ID string) (nomad.Evaluation, error) {
+	args := c.Called(ID)
+	return args.Get(0).(nomad.Evaluation), args.Error(1)
 }
 
-func (c *testNomadClient) ParseJob(hcl string) (string, string, error) {
-	c.ParseJobCallCount++
-
-	return c.ParseJobReturnValue, c.ParseJobReturnID, nil
+func (c *mockNomadClient) ParseJob(hcl string) (string, string, error) {
+	args := c.Called(hcl)
+	return args.String(0), args.String(1), args.Error(2)
 }
 
-func (c *testNomadClient) UpdateJob(name string, data string) (nomad.UpdateJobResponse, error) {
-	c.UpdateJobCallCount++
-
-	return c.UpdateJobReturnValue, nil
+func (c *mockNomadClient) UpdateJob(name string, data string) (nomad.UpdateJobResponse, error) {
+	args := c.Called(name, data)
+	return args.Get(0).(nomad.UpdateJobResponse), args.Error(1)
 }
 
-func (c *testNomadClient) GetLatestDeployment(name string) (nomad.Deployment, error) {
-	c.GetLatestDeploymentCallCount++
-
-	return c.GetLatestDeploymentReturnValue, nil
+func (c *mockNomadClient) GetLatestDeployment(name string) (nomad.Deployment, error) {
+	args := c.Called(name)
+	return args.Get(0).(nomad.Deployment), args.Error(1)
 }
 
-func (c *testNomadClient) StopJob(ID string, purge bool) error {
-	c.StopJobCallCount++
-
-	return nil
+func (c *mockNomadClient) StopJob(ID string, purge bool) error {
+	args := c.Called(ID, purge)
+	return args.Error(0)
 }
 
-func (c *testNomadClient) ReadJob(ID string) (nomad.ReadJobResponse, error) {
-	c.ReadJobCallCount++
-
-	return c.ReadJobReturnValue, nil
+func (c *mockNomadClient) ReadJob(ID string) (nomad.ReadJobResponse, error) {
+	args := c.Called(ID)
+	return args.Get(0).(nomad.ReadJobResponse), args.Error(1)
 }
 
 func TestParseNomadFile(t *testing.T) {
@@ -209,6 +188,7 @@ func TestDeploy(t *testing.T) {
 				ErrorWriter: os.Stderr,
 			},
 			Config: config.Config{
+				Name: "app",
 				Deployments: map[string]config.Deployment{
 					"test": config.Deployment{
 						NomadFile: "test2.nomad",
@@ -235,29 +215,35 @@ func TestDeploy(t *testing.T) {
 
 	filet.File(t, "test2.nomad", data)
 
-	nomadClient := testNomadClient{
-		ReadDeploymentReturnValue: nomad.Deployment{
-			Status: "successful",
+	nomadClient := new(mockNomadClient)
+
+	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{}, nil).Once()
+	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
+	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: "eval-id"}, nil).Once()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "pending"}, nil).Twice()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "complete"}, nil).Once()
+	nomadClient.On("GetLatestDeployment", "job-id").Return(nomad.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{
+		ID:     "deployment-id",
+		Status: "running",
+		TaskGroups: map[string]nomad.DeploymentTaskGroup{
+			"web": {
+				HealthyAllocs:   2,
+				UnhealthyAllocs: 0,
+				DesiredTotal:    2,
+			},
 		},
-		ReadEvaluationReturnValue: nomad.Evaluation{
-			Status: "complete",
-		},
-		ParseJobReturnID: "some-job",
-		GetLatestDeploymentReturnValue: nomad.Deployment{
-			Status: "running",
-		},
-	}
+	}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{ID: "deployment-id", Status: "successful"}, nil).Once()
 
 	var errorCount int
 
-	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, &nomadClient, config.Environment{})
+	evaluationNotCompleteSleep = time.Millisecond * 1
+	healthyMatchesDesiredSleep = time.Millisecond * 1
+	healthyGreaterThanZeroSleep = time.Millisecond * 1
+	healthyIsZeroSleep = time.Millisecond * 1
+
+	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, nomadClient, config.Environment{})
 
 	assert.Equal(t, 0, errorCount)
-	assert.Equal(t, 1, nomadClient.ReadDeploymentCallCount)
-	assert.Equal(t, 1, nomadClient.ReadEvaluationCallCount)
-	assert.Equal(t, 1, nomadClient.ParseJobCallCount)
-	assert.Equal(t, 1, nomadClient.UpdateJobCallCount)
-	assert.Equal(t, 1, nomadClient.GetLatestDeploymentCallCount)
-	assert.Equal(t, 0, nomadClient.StopJobCallCount)
-	assert.Equal(t, 1, nomadClient.ReadJobCallCount)
 }
