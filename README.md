@@ -334,3 +334,5 @@ The following features will be added in later releases, in no particular order.
 
 - A `rollback` command to rollback to the last (or a given) nomad version.
 - Ability to automatically rollback all defined deployments on a single deployment failure.
+- Enable generation of a nomad file.
+- Allow configuration of max concurrent jobs in yaml config file.
