@@ -58,6 +58,7 @@ func (c *DestroyCommand) Run(args []string) int {
 
 	if envConfig.NomadURL == "" {
 		c.UI.Error(fmt.Sprintf("Unable to find any environment config for environment: %s", environment))
+		return 1
 	}
 
 	args = flags.Args()
