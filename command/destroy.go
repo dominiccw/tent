@@ -56,6 +56,10 @@ func (c *DestroyCommand) Run(args []string) int {
 
 	envConfig := c.Config.Environments[environment]
 
+	if envConfig.NomadURL == "" {
+		c.UI.Error(fmt.Sprintf("Unable to find any environment config for environment: %s", environment))
+	}
+
 	args = flags.Args()
 
 	if environment == "production" {

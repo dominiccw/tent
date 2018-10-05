@@ -61,6 +61,10 @@ func (c *DeployCommand) Run(args []string) int {
 
 	envConfig := c.Config.Environments[environment]
 
+	if envConfig.NomadURL == "" {
+		c.UI.Error(fmt.Sprintf("Unable to find any environment config for environment: %s", environment))
+	}
+
 	args = flags.Args()
 
 	if environment == "production" {
@@ -109,7 +113,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 	c.UI.Output(fmt.Sprintf("===> [%s] Starting deployment.", name))
 
 	if verbose {
-		c.UI.Output(fmt.Sprintf("===> [%s] Loading nomad file: %s.", name, deployment.NomadFile))
+		c.UI.Output(fmt.Sprintf("===> [%s] Loading nomad file: %s", name, deployment.NomadFile))
 	}
 
 	jobName := generateJobName(deployment.ServiceName, c.Config.Name, name)
@@ -135,7 +139,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 	}
 
 	if verbose {
-		c.UI.Output(fmt.Sprintf("===> [%s] Parsing nomad file and doing variable replacement: %s.", name, deployment.NomadFile))
+		c.UI.Output(fmt.Sprintf("===> [%s] Parsing nomad file and doing variable replacement: %s", name, deployment.NomadFile))
 	}
 
 	parsedFile, err := parseNomadFile(nomadFileContents, c.Config.Name, name, deployment, groupSizes, envConfig)
@@ -151,7 +155,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 	}
 
 	if verbose {
-		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s.", name, c.Config.Name))
+		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s", name, c.Config.Name))
 	}
 
 	json, id, err := nomadClient.ParseJob(parsedFile)
