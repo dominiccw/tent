@@ -30,6 +30,16 @@ type ReadJobResponse struct {
 	Name       string
 	Type       string
 	TaskGroups []TaskGroup
+	Periodic   Periodic
+}
+
+// Periodic is the configuration for a periodic job.
+type Periodic struct {
+	Enabled         bool
+	ProhibitOverlap bool
+	Spec            string
+	SpecType        string
+	TimeZone        string
 }
 
 // TaskGroup is a task group within a job.

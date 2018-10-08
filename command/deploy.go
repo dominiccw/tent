@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -159,7 +160,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s", name, c.Config.Name))
 	}
 
-	json, id, err := nomadClient.ParseJob(parsedFile)
+	jsonOutput, id, err := nomadClient.ParseJob(parsedFile)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Error building job spec:\n  %s", name, err))
@@ -175,7 +176,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 
 	c.UI.Output(fmt.Sprintf("===> [%s] Submitting job to nomad.", name))
 
-	result, e := nomadClient.UpdateJob(id, json)
+	result, e := nomadClient.UpdateJob(id, jsonOutput)
 
 	if e != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Error updating job \"%s\":\n %s", name, c.Config.Name, e))
@@ -196,7 +197,8 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 	if result.EvalID == "" && newJob.Type == "batch" {
 		return
 	} else if result.EvalID == "" {
-		c.UI.Error(fmt.Sprintf("===> [%s] Error during job update. Missing eval ID!", name))
+		out, _ := json.Marshal(newJob)
+		c.UI.Error(fmt.Sprintf("===> [%s] Error during job update of type \"%s\". Missing eval ID! \nJob: %s", name, newJob.Type, string(out)))
 		*errorCount++
 		return
 	}
