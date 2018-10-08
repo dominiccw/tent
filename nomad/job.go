@@ -28,9 +28,9 @@ type updateJobRequest struct {
 type ReadJobResponse struct {
 	ID         string
 	Name       string
-	Type       string
-	TaskGroups []TaskGroup
 	Periodic   Periodic
+	TaskGroups []TaskGroup
+	Type       string
 }
 
 // Periodic is the configuration for a periodic job.
@@ -87,13 +87,13 @@ func (c *DefaultClient) ParseJob(hcl string) (string, string, error) {
 
 	var job parseJobResponse
 
-	json.Unmarshal(buf, &job)
+	err = json.Unmarshal(buf, &job)
 
 	if job.ID == "" {
 		return "", "", fmt.Errorf("invalid response received from nomad for /v1/jobs/parse \n %s", string(buf))
 	}
 
-	return string(buf), job.ID, nil
+	return string(buf), job.ID, err
 }
 
 // UpdateJob registers the given job with nomad.
@@ -135,9 +135,9 @@ func (c *DefaultClient) UpdateJob(name string, data string) (UpdateJobResponse, 
 
 	var result UpdateJobResponse
 
-	json.Unmarshal(buf, &result)
+	err = json.Unmarshal(buf, &result)
 
-	return result, nil
+	return result, err
 }
 
 // GetLatestDeployment returns the most recent deployment for a job.
@@ -152,9 +152,9 @@ func (c *DefaultClient) GetLatestDeployment(name string) (Deployment, error) {
 
 	var result Deployment
 
-	json.Unmarshal(buf, &result)
+	err = json.Unmarshal(buf, &result)
 
-	return result, nil
+	return result, err
 }
 
 // StopJob stops a given job.
@@ -186,11 +186,15 @@ func (c *DefaultClient) ReadJob(ID string) (ReadJobResponse, error) {
 		return ReadJobResponse{}, err
 	}
 
-	buf, _ := ioutil.ReadAll(response.Body)
+	buf, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		return ReadJobResponse{}, err
+	}
 
 	var result ReadJobResponse
 
-	json.Unmarshal(buf, &result)
+	err = json.Unmarshal(buf, &result)
 
-	return result, nil
+	return result, err
 }

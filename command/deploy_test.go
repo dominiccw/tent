@@ -217,10 +217,11 @@ func TestDeploy(t *testing.T) {
 
 	nomadClient := new(mockNomadClient)
 
-	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{}, nil).Once()
+	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{}, nil).Once()
 	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
 	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: "eval-id"}, nil).Once()
-	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{Type: "service"}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{Type: "service"}, nil).Once()
 	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "pending"}, nil).Twice()
 	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "complete"}, nil).Once()
 	nomadClient.On("GetLatestDeployment", "job-id").Return(nomad.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
@@ -289,10 +290,11 @@ func TestDeployForJobWithNoEvaluationReturned(t *testing.T) {
 
 	nomadClient := new(mockNomadClient)
 
-	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{}, nil).Once()
+	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{}, nil).Once()
 	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
 	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: ""}, nil).Once()
-	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{Type: "batch"}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{Type: "batch"}, nil).Once()
 
 	var errorCount int
 
