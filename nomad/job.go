@@ -28,6 +28,7 @@ type updateJobRequest struct {
 type ReadJobResponse struct {
 	ID         string
 	Name       string
+	Type       string
 	TaskGroups []TaskGroup
 }
 
@@ -125,10 +126,6 @@ func (c *DefaultClient) UpdateJob(name string, data string) (UpdateJobResponse, 
 	var result UpdateJobResponse
 
 	json.Unmarshal(buf, &result)
-
-	if result.EvalID == "" {
-		return UpdateJobResponse{}, fmt.Errorf("invalid response returned from nomad when updating job \n\n %s", string(buf))
-	}
 
 	return result, nil
 }

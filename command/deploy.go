@@ -185,6 +185,22 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 
 	c.UI.Info(fmt.Sprintf("===> [%s] Job successfully sent to nomad.", name))
 
+	newJob, err := nomadClient.ReadJob(jobName)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error fetching created job \"%s\":\n %s", name, c.Config.Name, e))
+		*errorCount++
+		return
+	}
+
+	if result.EvalID == "" && newJob.Type == "batch" {
+		return
+	} else if result.EvalID == "" {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error during job update. Missing eval ID!", name))
+		*errorCount++
+		return
+	}
+
 	c.UI.Output(fmt.Sprintf("===> [%s] Monitoring deployment for success.", name))
 
 	eval, _ := nomadClient.ReadEvaluation(result.EvalID)

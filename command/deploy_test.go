@@ -220,6 +220,7 @@ func TestDeploy(t *testing.T) {
 	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{}, nil).Once()
 	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
 	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: "eval-id"}, nil).Once()
+	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{Type: "service"}, nil).Once()
 	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "pending"}, nil).Twice()
 	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "complete"}, nil).Once()
 	nomadClient.On("GetLatestDeployment", "job-id").Return(nomad.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
@@ -242,6 +243,58 @@ func TestDeploy(t *testing.T) {
 	healthyMatchesDesiredSleep = time.Millisecond * 1
 	healthyGreaterThanZeroSleep = time.Millisecond * 1
 	healthyIsZeroSleep = time.Millisecond * 1
+
+	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, nomadClient, config.Environment{})
+
+	assert.Equal(t, 0, errorCount)
+}
+
+func TestDeployForJobWithNoEvaluationReturned(t *testing.T) {
+	defer filet.CleanUp(t)
+
+	deployCommand := DeployCommand{
+		Meta: Meta{
+			UI: &cli.BasicUi{
+				Reader:      os.Stdin,
+				Writer:      os.Stdout,
+				ErrorWriter: os.Stderr,
+			},
+			Config: config.Config{
+				Name: "app",
+				Deployments: map[string]config.Deployment{
+					"test": config.Deployment{
+						NomadFile: "test2.nomad",
+					},
+				},
+			},
+		},
+	}
+
+	var data = `
+    job "test" {
+		datacenters = ["dc1"]
+		type = "batch"
+
+		group "app" {
+			count = 2
+
+			task "web" {
+				driver = "docker"
+			}
+		}
+	}
+	`
+
+	filet.File(t, "test2.nomad", data)
+
+	nomadClient := new(mockNomadClient)
+
+	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{}, nil).Once()
+	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
+	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: ""}, nil).Once()
+	nomadClient.On("ReadJob", "app-test").Return(nomad.ReadJobResponse{Type: "batch"}, nil).Once()
+
+	var errorCount int
 
 	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, nomadClient, config.Environment{})
 
