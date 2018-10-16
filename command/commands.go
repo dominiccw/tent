@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	config "github.com/PM-Connect/tent/config"
+	config "github.com/pm-connect/tent/config"
 	"github.com/mitchellh/cli"
 )
 

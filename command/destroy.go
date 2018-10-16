@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	config "github.com/PM-Connect/tent/config"
-	nomad "github.com/PM-Connect/tent/nomad"
+	config "github.com/pm-connect/tent/config"
+	nomad "github.com/pm-connect/tent/nomad"
 )
 
 // DestroyCommand runs the build to prepare the project for deployment.

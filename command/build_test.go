@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	config "github.com/PM-Connect/tent/config"
-	"github.com/PM-Connect/tent/docker"
+	config "github.com/pm-connect/tent/config"
+	"github.com/pm-connect/tent/docker"
 	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 )

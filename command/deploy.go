@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	config "github.com/PM-Connect/tent/config"
-	nomad "github.com/PM-Connect/tent/nomad"
+	config "github.com/pm-connect/tent/config"
+	nomad "github.com/pm-connect/tent/nomad"
 	"github.com/valyala/fasttemplate"
 )
 

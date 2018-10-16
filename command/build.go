@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	config "github.com/PM-Connect/tent/config"
-	"github.com/PM-Connect/tent/docker"
+	config "github.com/pm-connect/tent/config"
+	"github.com/pm-connect/tent/docker"
 )
 
 // BuildCommand runs the build to prepare the project for deployment.

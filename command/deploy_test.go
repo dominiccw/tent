@@ -6,8 +6,8 @@ import (
 	"time"
 
 	filet "github.com/Flaque/filet"
-	config "github.com/PM-Connect/tent/config"
-	"github.com/PM-Connect/tent/nomad"
+	config "github.com/pm-connect/tent/config"
+	"github.com/pm-connect/tent/nomad"
 	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -247,6 +247,7 @@ func TestDeploy(t *testing.T) {
 
 	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, nomadClient, config.Environment{})
 
+	nomadClient.AssertExpectations(t)
 	assert.Equal(t, 0, errorCount)
 }
 
@@ -300,5 +301,6 @@ func TestDeployForJobWithNoEvaluationReturned(t *testing.T) {
 
 	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, nomadClient, config.Environment{})
 
+	nomadClient.AssertExpectations(t)
 	assert.Equal(t, 0, errorCount)
 }

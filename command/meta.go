@@ -1,7 +1,7 @@
 package command
 
 import (
-	"github.com/PM-Connect/tent/config"
+	"github.com/pm-connect/tent/config"
 	"github.com/mitchellh/cli"
 )
 
