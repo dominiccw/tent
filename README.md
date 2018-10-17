@@ -1,4 +1,4 @@
-# Tent [![Build Status](https://travis-ci.org/pm-connect/tent.svg?branch=master)](https://travis-ci.org/pm-connect/tent)
+# Tent [![Build Status](https://travis-ci.org/pm-connect/tent.svg?branch=master)](https://travis-ci.org/pm-connect/tent) [![Go Report Card](https://goreportcard.com/badge/github.com/pm-connect/tent)](https://goreportcard.com/report/github.com/pm-connect/tent)
 
 A simple tool to manage builds and deployments when using [Nomad](https://nomadproject.io) and Docker. (Although docker is optional!)
 
