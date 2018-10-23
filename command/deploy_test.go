@@ -304,3 +304,77 @@ func TestDeployForJobWithNoEvaluationReturned(t *testing.T) {
 	nomadClient.AssertExpectations(t)
 	assert.Equal(t, 0, errorCount)
 }
+
+func TestDeployForJobThatFails(t *testing.T) {
+	defer filet.CleanUp(t)
+
+	deployCommand := DeployCommand{
+		Meta: Meta{
+			UI: &cli.BasicUi{
+				Reader:      os.Stdin,
+				Writer:      os.Stdout,
+				ErrorWriter: os.Stderr,
+			},
+			Config: config.Config{
+				Name: "app",
+				Deployments: map[string]config.Deployment{
+					"test": config.Deployment{
+						NomadFile: "test2.nomad",
+					},
+				},
+			},
+		},
+	}
+
+	var data = `
+    job "test" {
+		datacenters = ["dc1"]
+		type = "service"
+
+		group "app" {
+			count = 2
+
+			task "web" {
+				driver = "docker"
+			}
+		}
+	}
+	`
+
+	filet.File(t, "test2.nomad", data)
+
+	nomadClient := new(mockNomadClient)
+
+	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{}, nil).Once()
+	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
+	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: "eval-id"}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{Type: "service"}, nil).Once()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "pending"}, nil).Twice()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "complete"}, nil).Once()
+	nomadClient.On("GetLatestDeployment", "job-id").Return(nomad.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{
+		ID:     "deployment-id",
+		Status: "running",
+		TaskGroups: map[string]nomad.DeploymentTaskGroup{
+			"web": {
+				HealthyAllocs:   2,
+				UnhealthyAllocs: 0,
+				DesiredTotal:    2,
+			},
+		},
+	}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{ID: "deployment-id", Status: "failure"}, nil).Once()
+
+	var errorCount int
+
+	evaluationNotCompleteSleep = time.Millisecond * 1
+	healthyMatchesDesiredSleep = time.Millisecond * 1
+	healthyGreaterThanZeroSleep = time.Millisecond * 1
+	healthyIsZeroSleep = time.Millisecond * 1
+
+	deployCommand.deploy("test", deployCommand.Meta.Config.Deployments["test"], true, &errorCount, nomadClient, config.Environment{})
+
+	nomadClient.AssertExpectations(t)
+	assert.Equal(t, 1, errorCount)
+}

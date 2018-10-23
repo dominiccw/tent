@@ -284,6 +284,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		if nomadDeployment.Status == "successful" {
 			c.UI.Info(fmt.Sprintf("===> [%s] Deployment successful.", name))
 		} else {
+			*errorCount++
 			c.UI.Error(fmt.Sprintf("===> [%s] Deployment unsuccessful. Status: %s", name, nomadDeployment.StatusDescription))
 		}
 	} else {
