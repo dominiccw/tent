@@ -196,6 +196,10 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		return
 	}
 
+	if verbose {
+		c.UI.Output(fmt.Sprintf("===> [%s] Nomad File JSON: \n %s", name, jsonOutput))
+	}
+
 	c.UI.Output(fmt.Sprintf("===> [%s] Submitting job to nomad.", name))
 
 	result, e := nomadClient.UpdateJob(id, jsonOutput)

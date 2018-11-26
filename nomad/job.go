@@ -68,7 +68,8 @@ func (c *DefaultClient) ParseJob(hcl string) (string, string, error) {
 		return "", "", err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v1/jobs/parse", c.Address), bytes.NewBuffer(requestContent))
+	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/v1/jobs/parse", c.Address), bytes.NewBuffer(requestContent))
+
 	req.Header.Set("Content-Type", "application/json")
 
 	response, err := nomadClient.Do(req)
@@ -78,6 +79,10 @@ func (c *DefaultClient) ParseJob(hcl string) (string, string, error) {
 	}
 
 	defer response.Body.Close()
+
+	if response.StatusCode >= 200 && response.StatusCode <= 299 {
+		return "", "", fmt.Errorf("received status code %d when parsing the nomad job", response.StatusCode)
+	}
 
 	buf, err := ioutil.ReadAll(response.Body)
 
