@@ -80,11 +80,11 @@ func (c *DefaultClient) ParseJob(hcl string) (string, string, error) {
 
 	defer response.Body.Close()
 
-	if response.StatusCode >= 200 && response.StatusCode <= 299 {
-		return "", "", fmt.Errorf("received status code %d when parsing the nomad job", response.StatusCode)
-	}
-
 	buf, err := ioutil.ReadAll(response.Body)
+
+	if response.StatusCode <= 200 && response.StatusCode >= 300 {
+		return "", "", fmt.Errorf("received status code %d when parsing the nomad job - response body: \n %s", response.StatusCode, string(buf))
+	}
 
 	if err != nil {
 		return "", "", err
