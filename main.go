@@ -11,7 +11,7 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/pm-connect/tent/command"
-	config "github.com/pm-connect/tent/config"
+	"github.com/pm-connect/tent/config"
 )
 
 func main() {

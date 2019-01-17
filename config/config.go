@@ -100,7 +100,7 @@ func parseConfig(data []byte) (Config, error) {
 			b.RegistryURL = tmpRegistryURL
 
 			tmpBuildName, _ := envsubst.String(b.Name)
-			b.Name = tmpBuildName
+			b.Name = strings.ToLower(tmpBuildName)
 
 			tmpTarget, _ := envsubst.String(b.Target)
 			b.Target = tmpTarget
@@ -108,11 +108,11 @@ func parseConfig(data []byte) (Config, error) {
 			tmpDeployTag, _ := envsubst.String(b.DeployTag)
 			b.DeployTag = strings.Replace(tmpDeployTag, "/", "-", -1)
 
-			newTags := []string{}
+			var newTags []string
 
 			for _, tag := range b.Tags {
 				tmpTag, _ := envsubst.String(tag)
-				newTags = append(newTags, strings.Replace(tmpTag, "/", "-", -1))
+				newTags = append(newTags, strings.ToLower(strings.Replace(tmpTag, "/", "-", -1)))
 			}
 
 			if len(b.Script) > 0 {
