@@ -82,7 +82,12 @@ func (c *DestroyCommand) Run(args []string) int {
 
 	nomadURL := generateNomadURL(envConfig.NomadURL)
 
-	nomadClient := nomad.NewDefaultClient(nomadURL)
+	nomadClient, err := nomad.NewDefaultClient(nomadURL)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprint(err))
+		return 1
+	}
 
 	var concurrency int
 

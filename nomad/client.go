@@ -23,10 +23,20 @@ type Client interface {
 // DefaultClient is the default nomad client.
 type DefaultClient struct {
 	Address string
+	Client *nomad.Client
 }
 
-func NewDefaultClient(addr string) *DefaultClient {
+func NewDefaultClient(addr string) (*DefaultClient, error) {
+	client, err := nomad.NewClient(&nomad.Config{
+		Address: addr,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &DefaultClient{
 		Address: addr,
-	}
+		Client: client,
+	}, nil
 }
