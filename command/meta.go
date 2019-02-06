@@ -1,8 +1,8 @@
 package command
 
 import (
-	"github.com/pm-connect/tent/config"
 	"github.com/mitchellh/cli"
+	"github.com/pm-connect/tent/config"
 )
 
 // Meta contains the meta options for functionaly for neraly every command.

@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	config "github.com/pm-connect/tent/config"
 	"github.com/mitchellh/cli"
+	config "github.com/pm-connect/tent/config"
 )
 
 func generalOptionsUsage() string {
