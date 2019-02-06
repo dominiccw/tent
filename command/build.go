@@ -42,9 +42,14 @@ func (c *BuildCommand) Run(args []string) int {
 
 	flags := flag.NewFlagSet(c.Name(), flag.ContinueOnError)
 	flags.BoolVar(&verbose, "verbose", false, "Turn on verbose output.")
-	flags.Parse(args)
+	err := flags.Parse(args)
 
-	args = flags.Args()
+	if err != nil {
+		c.UI.Error(fmt.Sprint(err))
+		return 1
+	}
+
+	flags.Args()
 
 	var concurrency int
 

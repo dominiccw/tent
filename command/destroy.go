@@ -66,7 +66,7 @@ func (c *DestroyCommand) Run(args []string) int {
 		return 1
 	}
 
-	args = flags.Args()
+	flags.Args()
 
 	if environment == "production" {
 		c.UI.Warn("You are running using the Production environment!")

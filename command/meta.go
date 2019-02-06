@@ -5,7 +5,7 @@ import (
 	"github.com/pm-connect/tent/config"
 )
 
-// Meta contains the meta options for functionaly for neraly every command.
+// Meta contains the meta options for functionally for nearly every command.
 type Meta struct {
 	Config config.Config
 	UI     cli.Ui

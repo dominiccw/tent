@@ -72,7 +72,7 @@ func (c *DeployCommand) Run(args []string) int {
 		return 1
 	}
 
-	args = flags.Args()
+	flags.Args()
 
 	if environment == "production" {
 		c.UI.Warn("You are running using the Production environment!")
@@ -239,7 +239,13 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 
 	c.UI.Output(fmt.Sprintf("===> [%s] Monitoring deployment for success.", name))
 
-	eval, _ := nomadClient.ReadEvaluation(result.EvalID)
+	eval, err := nomadClient.ReadEvaluation(result.EvalID)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error reading evaluation for job \"%s\":\n %s", name, c.Config.Name, e))
+		*errorCount++
+		return
+	}
 
 	for eval.Status != "complete" {
 		evalStatus, _ := nomadClient.ReadEvaluation(result.EvalID)
