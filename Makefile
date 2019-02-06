@@ -21,6 +21,9 @@ crossbinary: binary
 	GOOS=windows GOARCH=386 go build -o "$(CURDIR)/dist/tent-windows-386.exe"
 
 install: clean
+	go mod download
+	go mod tidy
+	go mod verify
 	go mod vendor
 	go generate
 
