@@ -52,7 +52,12 @@ func (c *DestroyCommand) Run(args []string) int {
 	flags.BoolVar(&purge, "purge", false, "Purge the job on nomad immediately.")
 	flags.BoolVar(&force, "force", false, "Force the descruction and to not ask for confirmation.")
 	flags.StringVar(&environment, "env", "production", "Specify the environment to use.")
-	flags.Parse(args)
+	err := flags.Parse(args)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprint(err))
+		return 1
+	}
 
 	envConfig := c.Config.Environments[environment]
 
@@ -77,9 +82,7 @@ func (c *DestroyCommand) Run(args []string) int {
 
 	nomadURL := generateNomadURL(envConfig.NomadURL)
 
-	nomadClient := nomad.DefaultClient{
-		Address: nomadURL,
-	}
+	nomadClient := nomad.NewDefaultClient(nomadURL)
 
 	var concurrency int
 
@@ -98,7 +101,7 @@ func (c *DestroyCommand) Run(args []string) int {
 		go func(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client) {
 			defer func() { <-sem }()
 			c.destroy(name, deployment, envConfig, purge, verbose, errorCount, nomadClient)
-		}(name, deployment, verbose, &errorCount, &nomadClient)
+		}(name, deployment, verbose, &errorCount, nomadClient)
 	}
 
 	for i := 0; i < cap(sem); i++ {
@@ -128,7 +131,7 @@ func (c *DestroyCommand) destroy(name string, deployment config.Deployment, envi
 
 	if err == nil {
 		for _, group := range existingJob.TaskGroups {
-			groupSizes[group.Name] = group.Count
+			groupSizes[*group.Name] = *group.Count
 		}
 	}
 
@@ -158,7 +161,7 @@ func (c *DestroyCommand) destroy(name string, deployment config.Deployment, envi
 		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s.", name, c.Config.Name))
 	}
 
-	_, id, err := nomadClient.ParseJob(parsedFile)
+	job, err := nomadClient.ParseJob(parsedFile)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] %s", name, err))
@@ -168,13 +171,13 @@ func (c *DestroyCommand) destroy(name string, deployment config.Deployment, envi
 
 	c.UI.Output(fmt.Sprintf("===> [%s] Stopping job.", name))
 
-	err = nomadClient.StopJob(id, false)
+	err = nomadClient.StopJob(*job.ID, false)
 
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("===> [%s] Error stopping job %s: %s", name, id, err))
+		c.UI.Error(fmt.Sprintf("===> [%s] Error stopping job %s: %s", name, *job.ID, err))
 		*errorCount++
 		return
 	}
 
-	c.UI.Info(fmt.Sprintf("===> [%s] Successfully stopped job: %s", name, id))
+	c.UI.Info(fmt.Sprintf("===> [%s] Successfully stopped job: %s", name, *job.ID))
 }

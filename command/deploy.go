@@ -58,7 +58,12 @@ func (c *DeployCommand) Run(args []string) int {
 	flags := flag.NewFlagSet(c.Name(), flag.ContinueOnError)
 	flags.BoolVar(&verbose, "verbose", false, "Turn on verbose output.")
 	flags.StringVar(&environment, "env", "production", "Specify the environment to use.")
-	flags.Parse(args)
+	err := flags.Parse(args)
+
+	if err != nil {
+		c.UI.Error(fmt.Sprint(err))
+		return 1
+	}
 
 	envConfig := c.Config.Environments[environment]
 
@@ -75,9 +80,7 @@ func (c *DeployCommand) Run(args []string) int {
 
 	nomadURL := generateNomadURL(envConfig.NomadURL)
 
-	nomadClient := nomad.DefaultClient{
-		Address: nomadURL,
-	}
+	nomadClient := nomad.NewDefaultClient(nomadURL)
 
 	var concurrency int
 
@@ -96,7 +99,7 @@ func (c *DeployCommand) Run(args []string) int {
 		go func(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client, envConfig config.Environment) {
 			defer func() { <-sem }()
 			c.deploy(name, deployment, verbose, errorCount, nomadClient, envConfig)
-		}(name, deployment, verbose, &errorCount, &nomadClient, envConfig)
+		}(name, deployment, verbose, &errorCount, nomadClient, envConfig)
 	}
 
 	for i := 0; i < cap(sem); i++ {
@@ -142,7 +145,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		return
 	}
 
-	jsonOutput, id, err := nomadClient.ParseJob(parsedFile)
+	job, err := nomadClient.ParseJob(parsedFile)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Error building job spec:\n  %s", name, err))
@@ -150,19 +153,19 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		return
 	}
 
-	if len(id) == 0 {
+	if len(*job.ID) == 0 {
 		c.UI.Error(fmt.Sprintf("===> [%s] Invalid JobID returned from nomad.", name))
 		*errorCount++
 		return
 	}
 
-	existingJob, err := nomadClient.ReadJob(id)
+	existingJob, err := nomadClient.ReadJob(*job.ID)
 
 	groupSizes := map[string]int{}
 
 	if err == nil {
 		for _, group := range existingJob.TaskGroups {
-			groupSizes[group.Name] = group.Count
+			groupSizes[*group.Name] = *group.Count
 		}
 	}
 
@@ -182,7 +185,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		c.UI.Output(fmt.Sprintf("===> [%s] Converting job file to json for job: %s", name, c.Config.Name))
 	}
 
-	jsonOutput, id, err = nomadClient.ParseJob(parsedFile)
+	job, err = nomadClient.ParseJob(parsedFile)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Error building job spec:\n  %s", name, err))
@@ -190,19 +193,19 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		return
 	}
 
-	if len(id) == 0 {
+	if len(*job.ID) == 0 {
 		c.UI.Error(fmt.Sprintf("===> [%s] Invalid JobID returned from nomad.", name))
 		*errorCount++
 		return
 	}
 
 	if verbose {
-		c.UI.Output(fmt.Sprintf("===> [%s] Nomad File JSON: \n %s", name, jsonOutput))
+		c.UI.Output(fmt.Sprintf("===> [%s] Nomad Job: \n %+v", name, job))
 	}
 
 	c.UI.Output(fmt.Sprintf("===> [%s] Submitting job to nomad.", name))
 
-	result, e := nomadClient.UpdateJob(id, jsonOutput)
+	result, e := nomadClient.UpdateJob(job)
 
 	if e != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Error updating job \"%s\":\n %s", name, c.Config.Name, e))
@@ -212,7 +215,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 
 	c.UI.Info(fmt.Sprintf("===> [%s] Job successfully sent to nomad.", name))
 
-	newJob, err := nomadClient.ReadJob(id)
+	newJob, err := nomadClient.ReadJob(*job.ID)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Error fetching created job \"%s\":\n %s", name, c.Config.Name, e))
@@ -220,11 +223,11 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		return
 	}
 
-	if result.EvalID == "" && newJob.Type == "batch" {
+	if result.EvalID == "" && *newJob.Type == "batch" {
 		return
 	} else if result.EvalID == "" {
 		out, _ := json.Marshal(newJob)
-		c.UI.Error(fmt.Sprintf("===> [%s] Error during job update of type \"%s\". Missing eval ID! \nJob: %s", name, newJob.Type, string(out)))
+		c.UI.Error(fmt.Sprintf("===> [%s] Error during job update of type \"%s\". Missing eval ID! \nJob: %s", name, *newJob.Type, string(out)))
 		*errorCount++
 		return
 	}
@@ -244,7 +247,7 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 		time.Sleep(evaluationNotCompleteSleep)
 	}
 
-	nomadDeployment, err := nomadClient.GetLatestDeployment(id)
+	nomadDeployment, err := nomadClient.GetLatestDeployment(*job.ID)
 
 	if nomadDeployment.Status == "successful" {
 		c.UI.Info(fmt.Sprintf("===> [%s] Deployment successful.", name))
@@ -298,13 +301,13 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 
 func loadNomadFile(path string) (string, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return "", fmt.Errorf("Unable to find nomad file: %s", path)
+		return "", fmt.Errorf("unable to find nomad file: %s", path)
 	}
 
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return "", fmt.Errorf("Unable to load nomad file: %s err: %s", path, err)
+		return "", fmt.Errorf("unable to load nomad file: %s err: %s", path, err)
 	}
 
 	return string(file), nil

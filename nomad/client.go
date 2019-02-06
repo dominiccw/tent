@@ -1,24 +1,23 @@
 package nomad
 
 import (
-	"net/http"
-	"time"
+	nomad "github.com/hashicorp/nomad/api"
 )
 
 // Client interface.
 type Client interface {
 	// Deployment
-	ReadDeployment(ID string) (Deployment, error)
+	ReadDeployment(ID string) (*nomad.Deployment, error)
 
 	// Evaluation
-	ReadEvaluation(ID string) (Evaluation, error)
+	ReadEvaluation(ID string) (*nomad.Evaluation, error)
 
 	// Job
-	ParseJob(hcl string) (string, string, error)
-	UpdateJob(name string, data string) (UpdateJobResponse, error)
-	GetLatestDeployment(name string) (Deployment, error)
+	ParseJob(hcl string) (*nomad.Job, error)
+	UpdateJob(*nomad.Job) (*nomad.JobRegisterResponse, error)
+	GetLatestDeployment(name string) (*nomad.Deployment, error)
 	StopJob(ID string, purge bool) error
-	ReadJob(ID string) (ReadJobResponse, error)
+	ReadJob(ID string) (*nomad.Job, error)
 }
 
 // DefaultClient is the default nomad client.
@@ -26,6 +25,8 @@ type DefaultClient struct {
 	Address string
 }
 
-var nomadClient = &http.Client{
-	Timeout: time.Second * 10,
+func NewDefaultClient(addr string) *DefaultClient {
+	return &DefaultClient{
+		Address: addr,
+	}
 }

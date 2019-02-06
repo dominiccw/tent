@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	filet "github.com/Flaque/filet"
-	config "github.com/pm-connect/tent/config"
-	"github.com/pm-connect/tent/nomad"
+	"github.com/Flaque/filet"
+	nomadAPI "github.com/hashicorp/nomad/api"
 	"github.com/mitchellh/cli"
+	"github.com/pm-connect/tent/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,29 +17,29 @@ type mockNomadClient struct {
 	mock.Mock
 }
 
-func (c *mockNomadClient) ReadDeployment(ID string) (nomad.Deployment, error) {
+func (c *mockNomadClient) ReadDeployment(ID string) (*nomadAPI.Deployment, error) {
 	args := c.Called(ID)
-	return args.Get(0).(nomad.Deployment), args.Error(1)
+	return args.Get(0).(*nomadAPI.Deployment), args.Error(1)
 }
 
-func (c *mockNomadClient) ReadEvaluation(ID string) (nomad.Evaluation, error) {
+func (c *mockNomadClient) ReadEvaluation(ID string) (*nomadAPI.Evaluation, error) {
 	args := c.Called(ID)
-	return args.Get(0).(nomad.Evaluation), args.Error(1)
+	return args.Get(0).(*nomadAPI.Evaluation), args.Error(1)
 }
 
-func (c *mockNomadClient) ParseJob(hcl string) (string, string, error) {
+func (c *mockNomadClient) ParseJob(hcl string) (*nomadAPI.Job, error) {
 	args := c.Called(hcl)
-	return args.String(0), args.String(1), args.Error(2)
+	return args.Get(0).(*nomadAPI.Job), args.Error(1)
 }
 
-func (c *mockNomadClient) UpdateJob(name string, data string) (nomad.UpdateJobResponse, error) {
-	args := c.Called(name, data)
-	return args.Get(0).(nomad.UpdateJobResponse), args.Error(1)
+func (c *mockNomadClient) UpdateJob(job *nomadAPI.Job) (*nomadAPI.JobRegisterResponse, error) {
+	args := c.Called(job)
+	return args.Get(0).(*nomadAPI.JobRegisterResponse), args.Error(1)
 }
 
-func (c *mockNomadClient) GetLatestDeployment(name string) (nomad.Deployment, error) {
+func (c *mockNomadClient) GetLatestDeployment(name string) (*nomadAPI.Deployment, error) {
 	args := c.Called(name)
-	return args.Get(0).(nomad.Deployment), args.Error(1)
+	return args.Get(0).(*nomadAPI.Deployment), args.Error(1)
 }
 
 func (c *mockNomadClient) StopJob(ID string, purge bool) error {
@@ -47,9 +47,9 @@ func (c *mockNomadClient) StopJob(ID string, purge bool) error {
 	return args.Error(0)
 }
 
-func (c *mockNomadClient) ReadJob(ID string) (nomad.ReadJobResponse, error) {
+func (c *mockNomadClient) ReadJob(ID string) (*nomadAPI.Job, error) {
 	args := c.Called(ID)
-	return args.Get(0).(nomad.ReadJobResponse), args.Error(1)
+	return args.Get(0).(*nomadAPI.Job), args.Error(1)
 }
 
 func TestParseNomadFile(t *testing.T) {
@@ -59,7 +59,7 @@ func TestParseNomadFile(t *testing.T) {
 		"deployment",
 		config.Deployment{
 			Builds: map[string]config.Build{
-				"web": config.Build{
+				"web": {
 					RegistryURL: "some-registry.com",
 					Name:        "test",
 					DeployTag:   "latest",
@@ -82,7 +82,7 @@ func TestParseNomadFileWithoutStartInstances(t *testing.T) {
 		"deployment",
 		config.Deployment{
 			Builds: map[string]config.Build{
-				"web": config.Build{
+				"web": {
 					RegistryURL: "some-registry.com",
 					Name:        "test",
 					DeployTag:   "latest",
@@ -104,7 +104,7 @@ func TestParseNomadFileWithGroupSizes(t *testing.T) {
 		"deployment",
 		config.Deployment{
 			Builds: map[string]config.Build{
-				"web": config.Build{
+				"web": {
 					RegistryURL: "some-registry.com",
 					Name:        "test",
 					DeployTag:   "latest",
@@ -190,7 +190,7 @@ func TestDeploy(t *testing.T) {
 			Config: config.Config{
 				Name: "app",
 				Deployments: map[string]config.Deployment{
-					"test": config.Deployment{
+					"test": {
 						NomadFile: "test2.nomad",
 					},
 				},
@@ -217,18 +217,21 @@ func TestDeploy(t *testing.T) {
 
 	nomadClient := new(mockNomadClient)
 
-	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
-	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{}, nil).Once()
-	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
-	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: "eval-id"}, nil).Once()
-	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{Type: "service"}, nil).Once()
-	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "pending"}, nil).Twice()
-	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "complete"}, nil).Once()
-	nomadClient.On("GetLatestDeployment", "job-id").Return(nomad.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
-	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{
+	expectedType := "service"
+	expectedJobId := "job-id"
+
+	nomadClient.On("ParseJob", data).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("ReadJob", expectedJobId).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("ParseJob", data).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("UpdateJob", &nomadAPI.Job{ID: &expectedJobId}).Return(&nomadAPI.JobRegisterResponse{EvalID: "eval-id"}, nil).Once()
+	nomadClient.On("ReadJob", expectedJobId).Return(&nomadAPI.Job{Type: &expectedType}, nil).Once()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(&nomadAPI.Evaluation{Status: "pending"}, nil).Twice()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(&nomadAPI.Evaluation{Status: "complete"}, nil).Once()
+	nomadClient.On("GetLatestDeployment", expectedJobId).Return(&nomadAPI.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(&nomadAPI.Deployment{
 		ID:     "deployment-id",
 		Status: "running",
-		TaskGroups: map[string]nomad.DeploymentTaskGroup{
+		TaskGroups: map[string]*nomadAPI.DeploymentState{
 			"web": {
 				HealthyAllocs:   2,
 				UnhealthyAllocs: 0,
@@ -236,7 +239,7 @@ func TestDeploy(t *testing.T) {
 			},
 		},
 	}, nil).Once()
-	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{ID: "deployment-id", Status: "successful"}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(&nomadAPI.Deployment{ID: "deployment-id", Status: "successful"}, nil).Once()
 
 	var errorCount int
 
@@ -264,7 +267,7 @@ func TestDeployForJobWithNoEvaluationReturned(t *testing.T) {
 			Config: config.Config{
 				Name: "app",
 				Deployments: map[string]config.Deployment{
-					"test": config.Deployment{
+					"test": {
 						NomadFile: "test2.nomad",
 					},
 				},
@@ -291,11 +294,14 @@ func TestDeployForJobWithNoEvaluationReturned(t *testing.T) {
 
 	nomadClient := new(mockNomadClient)
 
-	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
-	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{}, nil).Once()
-	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
-	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: ""}, nil).Once()
-	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{Type: "batch"}, nil).Once()
+	expectedType := "batch"
+	expectedJobId := "job-id"
+
+	nomadClient.On("ParseJob", data).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("ParseJob", data).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("UpdateJob", &nomadAPI.Job{ID: &expectedJobId}).Return(&nomadAPI.JobRegisterResponse{EvalID: ""}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(&nomadAPI.Job{Type: &expectedType}, nil).Once()
 
 	var errorCount int
 
@@ -318,7 +324,7 @@ func TestDeployForJobThatFails(t *testing.T) {
 			Config: config.Config{
 				Name: "app",
 				Deployments: map[string]config.Deployment{
-					"test": config.Deployment{
+					"test": {
 						NomadFile: "test2.nomad",
 					},
 				},
@@ -345,18 +351,21 @@ func TestDeployForJobThatFails(t *testing.T) {
 
 	nomadClient := new(mockNomadClient)
 
-	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
-	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{}, nil).Once()
-	nomadClient.On("ParseJob", data).Return("{\"job\": {}}", "job-id", nil).Once()
-	nomadClient.On("UpdateJob", "job-id", "{\"job\": {}}").Return(nomad.UpdateJobResponse{EvalID: "eval-id"}, nil).Once()
-	nomadClient.On("ReadJob", "job-id").Return(nomad.ReadJobResponse{Type: "service"}, nil).Once()
-	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "pending"}, nil).Twice()
-	nomadClient.On("ReadEvaluation", "eval-id").Return(nomad.Evaluation{Status: "complete"}, nil).Once()
-	nomadClient.On("GetLatestDeployment", "job-id").Return(nomad.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
-	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{
+	expectedType := "service"
+	expectedJobId := "job-id"
+
+	nomadClient.On("ParseJob", data).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("ParseJob", data).Return(&nomadAPI.Job{ID: &expectedJobId}, nil).Once()
+	nomadClient.On("UpdateJob", &nomadAPI.Job{ID: &expectedJobId}).Return(&nomadAPI.JobRegisterResponse{EvalID: "eval-id"}, nil).Once()
+	nomadClient.On("ReadJob", "job-id").Return(&nomadAPI.Job{Type: &expectedType}, nil).Once()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(&nomadAPI.Evaluation{Status: "pending"}, nil).Twice()
+	nomadClient.On("ReadEvaluation", "eval-id").Return(&nomadAPI.Evaluation{Status: "complete"}, nil).Once()
+	nomadClient.On("GetLatestDeployment", "job-id").Return(&nomadAPI.Deployment{ID: "deployment-id", Status: "running"}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(&nomadAPI.Deployment{
 		ID:     "deployment-id",
 		Status: "running",
-		TaskGroups: map[string]nomad.DeploymentTaskGroup{
+		TaskGroups: map[string]*nomadAPI.DeploymentState{
 			"web": {
 				HealthyAllocs:   2,
 				UnhealthyAllocs: 0,
@@ -364,7 +373,7 @@ func TestDeployForJobThatFails(t *testing.T) {
 			},
 		},
 	}, nil).Once()
-	nomadClient.On("ReadDeployment", "deployment-id").Return(nomad.Deployment{ID: "deployment-id", Status: "failure"}, nil).Once()
+	nomadClient.On("ReadDeployment", "deployment-id").Return(&nomadAPI.Deployment{ID: "deployment-id", Status: "failure"}, nil).Once()
 
 	var errorCount int
 

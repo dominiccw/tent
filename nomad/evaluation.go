@@ -1,34 +1,24 @@
 package nomad
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	nomad "github.com/hashicorp/nomad/api"
 )
 
-// Evaluation details.
-type Evaluation struct {
-	ID                string
-	Type              string
-	TriggeredBy       string
-	JobID             string
-	Status            string
-	StatusDescription string
-}
-
 // ReadEvaluation reads the requested evaluation.
-func (c *DefaultClient) ReadEvaluation(ID string) (Evaluation, error) {
-	response, err := nomadClient.Get(fmt.Sprintf("%s/v1/evaluation/%s", c.Address, ID))
+func (c *DefaultClient) ReadEvaluation(ID string) (*nomad.Evaluation, error) {
+	client, err := nomad.NewClient(&nomad.Config{
+		Address: c.Address,
+	})
 
 	if err != nil {
-		return Evaluation{}, err
+		return &nomad.Evaluation{}, err
 	}
 
-	buf, _ := ioutil.ReadAll(response.Body)
+	eval, _, err := client.Evaluations().Info(ID, nil)
 
-	var result Evaluation
+	if err != nil {
+		return &nomad.Evaluation{}, err
+	}
 
-	json.Unmarshal(buf, &result)
-
-	return result, nil
+	return eval, nil
 }

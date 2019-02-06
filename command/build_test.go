@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/mitchellh/cli"
 	config "github.com/pm-connect/tent/config"
 	"github.com/pm-connect/tent/docker"
-	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,9 +57,9 @@ func TestBuildForSingleTag(t *testing.T) {
 			},
 			Config: config.Config{
 				Deployments: map[string]config.Deployment{
-					"test": config.Deployment{
+					"test": {
 						Builds: map[string]config.Build{
-							"app": config.Build{
+							"app": {
 								Context:     ".",
 								RegistryURL: "some-registry.somewhere",
 								Name:        "my-image",
@@ -104,9 +104,9 @@ func TestBuildForMultipleTags(t *testing.T) {
 			},
 			Config: config.Config{
 				Deployments: map[string]config.Deployment{
-					"test": config.Deployment{
+					"test": {
 						Builds: map[string]config.Build{
-							"app": config.Build{
+							"app": {
 								Context:     ".",
 								RegistryURL: "some-registry.somewhere",
 								Name:        "my-image",
@@ -151,9 +151,9 @@ func TestBuildForMultipleTagsWithoutPush(t *testing.T) {
 			},
 			Config: config.Config{
 				Deployments: map[string]config.Deployment{
-					"test": config.Deployment{
+					"test": {
 						Builds: map[string]config.Build{
-							"app": config.Build{
+							"app": {
 								Context:     ".",
 								RegistryURL: "some-registry.somewhere",
 								Name:        "my-image",
