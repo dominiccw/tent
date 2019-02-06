@@ -260,6 +260,12 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 
 	nomadDeployment, err := nomadClient.GetLatestDeployment(*job.ID)
 
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("===> [%s] Error fetching latest deployment for job \"%s\":\n %s", name, c.Config.Name, e))
+		*errorCount++
+		return
+	}
+
 	if nomadDeployment.Status == "successful" {
 		c.UI.Info(fmt.Sprintf("===> [%s] Deployment successful.", name))
 	} else if nomadDeployment.Status == "running" {

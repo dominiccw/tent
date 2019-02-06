@@ -26,6 +26,7 @@ type DefaultClient struct {
 	Client  *nomad.Client
 }
 
+// NewDefaultClient creates a new client for the given address.
 func NewDefaultClient(addr string) (*DefaultClient, error) {
 	client, err := nomad.NewClient(&nomad.Config{
 		Address: addr,
