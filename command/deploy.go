@@ -101,19 +101,19 @@ func (c *DeployCommand) Run(args []string) int {
 
 	for name, deployment := range c.Config.Deployments {
 		sem <- true
-		go func(name string, deployment config.Deployment, verbose bool, errorCount *int, nomadClient nomad.Client, envConfig config.Environment) {
+		go func(name string, deployment config.Deployment, verbose bool, nomadClient nomad.Client, envConfig config.Environment) {
 			defer func() { <-sem }()
-			c.deploy(name, deployment, verbose, errorCount, nomadClient, envConfig)
-		}(name, deployment, verbose, &errorCount, nomadClient, envConfig)
+			c.deploy(name, deployment, verbose, &errorCount, nomadClient, envConfig)
+		}(name, deployment, verbose, nomadClient, envConfig)
 	}
 
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
 	}
 
-	if errorCount > 0 {
+	if errorCount != 0 {
 		c.UI.Error("Exiting with errors.")
-		return 1
+		return errorCount
 	}
 
 	return 0

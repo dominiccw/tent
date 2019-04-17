@@ -106,7 +106,7 @@ func parseConfig(data []byte) (Config, error) {
 			b.Target = tmpTarget
 
 			tmpDeployTag, _ := envsubst.String(b.DeployTag)
-			b.DeployTag = strings.Replace(tmpDeployTag, "/", "-", -1)
+			b.DeployTag = strings.ToLower(strings.Replace(tmpDeployTag, "/", "-", -1))
 
 			var newTags []string
 

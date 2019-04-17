@@ -36,7 +36,7 @@ func RunCustom(args []string) int {
 
 	cli := &cli.CLI{
 		Name:                       "tent",
-		Version:                    "1.0.0",
+		Version:                    "1.0.8",
 		Args:                       args,
 		Commands:                   commands,
 		Autocomplete:               true,
@@ -44,6 +44,8 @@ func RunCustom(args []string) int {
 		HelpFunc:                   groupedHelpFunc(cli.BasicHelpFunc("tent")),
 		HelpWriter:                 os.Stdout,
 	}
+
+	fmt.Println("Running Tent Version: 1.0.8")
 
 	exitCode, err := cli.Run()
 
