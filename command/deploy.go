@@ -273,9 +273,8 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 			deploymentInfo, err := nomadClient.ReadDeployment(nomadDeployment.ID)
 
 			if err != nil {
-				c.UI.Error(fmt.Sprintf("===> [%s] Error monitoring deployment: %s", name, err))
-				*errorCount++
-				return
+				c.UI.Warning(fmt.Sprintf("===> [%s] Error monitoring deployment: %s", name, err))
+				continue
 			}
 
 			nomadDeployment = deploymentInfo
