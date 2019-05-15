@@ -269,11 +269,17 @@ func (c *DeployCommand) deploy(name string, deployment config.Deployment, verbos
 	if nomadDeployment.Status == "successful" {
 		c.UI.Info(fmt.Sprintf("===> [%s] Deployment successful.", name))
 	} else if nomadDeployment.Status == "running" {
+		failures := 0
 		for nomadDeployment.Status == "running" {
 			deploymentInfo, err := nomadClient.ReadDeployment(nomadDeployment.ID)
 
 			if err != nil {
-				c.UI.Warning(fmt.Sprintf("===> [%s] Error monitoring deployment: %s", name, err))
+				c.UI.Warn(fmt.Sprintf("===> [%s] Error monitoring deployment: %s", name, err))
+				if failures > 5 {
+					return
+				}
+				failures++
+				time.Sleep(time.Second * 1)
 				continue
 			}
 
