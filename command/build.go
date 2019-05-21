@@ -134,7 +134,7 @@ func (c *BuildCommand) build(name string, build config.Build, verbose bool, buil
 
 	tags := buildTags(build.RegistryURL, build.Name, tagsToBuild)
 
-	err := builder.BuildImage(name, build.Context, tags, build.Target, tags[len(tags)-1], build.File, verbose)
+	err := builder.BuildImage(name, build.Context, tags, build.BuildArgs, build.Target, tags[len(tags)-1], build.File, verbose)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("===> [%s] Failed building image: %s", name, err))

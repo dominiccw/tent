@@ -132,7 +132,7 @@ deployments:
         # (Optional) The docker registry url to use.
         # - Supports environment variable interpolation.
         # - Should NOT include the protocol.
-        # Default:
+        # Default: <none>
         registry_url: example.com
 
         # The name of the docker image.
@@ -152,8 +152,14 @@ deployments:
 
         # (Optional) The dockerfile multi-stage target.
         # - Supports environment variable interpolation.
-        # Default:
+        # Default: <none>
         target: production
+        
+        # (Optional) The dockerfile build arguments.
+        # - Supports environment variable interpolation.
+        # Default: <none>
+        build_args:
+          arg: value
 
         # The tag to use when generating the image url/name to use in the nomad file.
         # The generated/built image (eg, 240422614719.dkr.ecr.eu-west-1.amazonaws.com/tent:my-tag)
@@ -178,11 +184,11 @@ deployments:
 
     # (Optional) Only to be used if the job name is hard coded within the nomad file. (job "my-name-here" { ... })
     # - Supports environment variable interpolation.
-    # Default: 
+    # Default: <none>
     service_name: my-service
 
     # (Optional) Any variables to make available when parsing the nomad file.
-    # Default: 
+    # Default: <none>
     variables:
       # A variable that can be used within a nomad file.
       # The below variable would be available as so: `[!var_some_variable!]`

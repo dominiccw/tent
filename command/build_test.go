@@ -201,7 +201,7 @@ type TestDocker struct {
 	PushImageCallCount  int
 }
 
-func (b *TestDocker) BuildImage(name string, context string, tags []string, target string, cacheFrom string, file string, output bool) error {
+func (b *TestDocker) BuildImage(name string, context string, tags []string, buildArgs map[string]string, target string, cacheFrom string, file string, output bool) error {
 	b.BuildImageCallCount++
 
 	return nil

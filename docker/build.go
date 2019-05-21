@@ -7,7 +7,7 @@ import (
 )
 
 // BuildImage builds a docker image from given config.
-func (b *DefaultDocker) BuildImage(name string, context string, tags []string, target string, cacheFrom string, file string, output bool) error {
+func (b *DefaultDocker) BuildImage(name string, context string, tags []string, buildArgs map[string]string, target string, cacheFrom string, file string, output bool) error {
 	args := []string{"build"}
 
 	if len(target) > 0 {
@@ -16,6 +16,10 @@ func (b *DefaultDocker) BuildImage(name string, context string, tags []string, t
 
 	for _, tag := range tags {
 		args = append(args, fmt.Sprintf("--tag=%s", tag))
+	}
+
+	for arg, value := range buildArgs {
+		args = append(args, fmt.Sprintf("--build-arg=%s=%s", arg, value))
 	}
 
 	if len(cacheFrom) > 0 {

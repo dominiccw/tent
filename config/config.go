@@ -28,6 +28,7 @@ type Build struct {
 	File        string   `yaml:"file" validate:"omitempty,file"`
 	DeployTag   string   `yaml:"deploy_tag"`
 	Script      string   `yaml:"script"`
+	BuildArgs   map[string]string `yaml:"build_args"`
 }
 
 // Deployment Configuration.
@@ -119,7 +120,15 @@ func parseConfig(data []byte) (Config, error) {
 				b.Script, _ = filepath.Abs(b.Script)
 			}
 
+			newBuildArgs := map[string]string{}
+
+			for k, v := range b.BuildArgs {
+				nv, _ := envsubst.String(v)
+				newBuildArgs[k] = nv
+			}
+
 			b.Tags = newTags
+			b.BuildArgs = newBuildArgs
 
 			x.Builds[key] = b
 		}
