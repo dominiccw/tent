@@ -24,10 +24,12 @@ type Client interface {
 type DefaultClient struct {
 	Address string
 	Client  *nomad.Client
+
+	httpRetryAttempts int
 }
 
 // NewDefaultClient creates a new client for the given address.
-func NewDefaultClient(addr string) (*DefaultClient, error) {
+func NewDefaultClient(addr string, httpRetryAttempts int) (*DefaultClient, error) {
 	client, err := nomad.NewClient(&nomad.Config{
 		Address: addr,
 	})
@@ -39,5 +41,6 @@ func NewDefaultClient(addr string) (*DefaultClient, error) {
 	return &DefaultClient{
 		Address: addr,
 		Client:  client,
+		httpRetryAttempts: httpRetryAttempts,
 	}, nil
 }

@@ -82,7 +82,7 @@ func (c *DestroyCommand) Run(args []string) int {
 
 	nomadURL := generateNomadURL(envConfig.NomadURL)
 
-	nomadClient, err := nomad.NewDefaultClient(nomadURL)
+	nomadClient, err := nomad.NewDefaultClient(nomadURL, 5)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprint(err))

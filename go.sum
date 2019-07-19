@@ -252,7 +252,7 @@ github.com/hashicorp/go-retryablehttp v0.5.0/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es
 github.com/hashicorp/go-retryablehttp v0.5.2 h1:AoISa4P4IsW0/m4T6St8Yw38gTl5GtBAgfkhYh1xAz4=
 github.com/hashicorp/go-retryablehttp v0.5.2/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
 github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90/go.mod h1:o4zcYY1e0GEZI6eSEr+43QDYmuGglw1qSO6qdHUHCgg=
-github.com/hashicorp/go-rootcerts v1.0.0 h1:ueI78wUjYExhCvMLow4icJnayNNFRgy0d9EGs/a1T44=
+github.com/hashicorp/go-rootcerts v1.0.0 h1:Rqb66Oo1X/eSV1x66xbDccZjhJigjg0+e82kpwzSwCI=
 github.com/hashicorp/go-rootcerts v1.0.0/go.mod h1:K6zTfqpRlCUIjkwsN4Z+hiSfzSTQa6eBIzfwKfwNnHU=
 github.com/hashicorp/go-sockaddr v0.0.0-20180320115054-6d291a969b86/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerXegt+ozgdvDeDU=
 github.com/hashicorp/go-sockaddr v1.0.0/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerXegt+ozgdvDeDU=

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2019-07-19 [![Build Status](https://travis-ci.org/PM-Connect/tent.svg?branch=v1.3.0)](https://travis-ci.org/PM-Connect/tent)
+## Added
+- Added the ability to retry failed http requests when talking to nomad.
+
 ## [1.2.0] - 2019-05-21 [![Build Status](https://travis-ci.org/PM-Connect/tent.svg?branch=v1.2.0)](https://travis-ci.org/PM-Connect/tent)
 ## Added
 - Added support for dockerfile build args using the `build_args` map within the builds section of the configuration.
