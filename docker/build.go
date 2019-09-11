@@ -19,7 +19,7 @@ func (b *DefaultDocker) BuildImage(name string, context string, tags []string, b
 	}
 
 	for arg, value := range buildArgs {
-		args = append(args, fmt.Sprintf("--build-arg=%s=%s", arg, value))
+		args = append(args, fmt.Sprintf("--build-arg=\"%s=%s\"", arg, value))
 	}
 
 	if len(cacheFrom) > 0 {
